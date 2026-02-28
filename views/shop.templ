@@ -6,8 +6,38 @@ var ShopTitle = "連携ショップ"
 var ShopShortTitle = "ショップ"
 
 type ShopArgs struct {
+	Year         int
+	Month        int
 	CurrentYear  int
 	CurrentMonth int
+}
+
+func (args ShopArgs) PrevYear() int {
+	if args.Month == 1 {
+		return args.Year - 1
+	}
+	return args.Year
+}
+
+func (args ShopArgs) PrevMonth() int {
+	if args.Month == 1 {
+		return 12
+	}
+	return args.Month - 1
+}
+
+func (args ShopArgs) NextYear() int {
+	if args.Month == 12 {
+		return args.Year + 1
+	}
+	return args.Year
+}
+
+func (args ShopArgs) NextMonth() int {
+	if args.Month == 12 {
+		return 1
+	}
+	return args.Month + 1
 }
 
 // ShopFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
@@ -103,6 +133,12 @@ templ ShopBottomNav(args ShopArgs) {
 			<span>{ HistoryShortTitle }</span>
 		</div>
 	</nav>
+}
+
+templ ShopError(message string) {
+	<div id="toast-container" hx-swap-oob="afterbegin">
+		<div class="alert alert-danger">{ message }</div>
+	</div>
 }
 
 templ ShopContent(args ShopArgs) {

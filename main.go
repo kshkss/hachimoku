@@ -45,7 +45,7 @@ func main() {
 	e.GET("/", handleAccountsRequest)
 	e.GET("/accounts/:type", handleAccountsRequest)
 	e.GET("/pnl/:year/:month", handlePNLRequest)
-	e.GET("/shop", handleShopRequest)
+	e.GET("/shop/:year/:month", handleShopRequest)
 	e.GET("/history", handleHistoryRequest)
 
 	e.Logger.Fatal(e.Start(":8080"))
@@ -132,19 +132,45 @@ func handleShopRequest(c echo.Context) error {
 	today := time.Now()
 	currentYear := today.Year()
 	currentMonth := int(today.Month())
+	yearStr := c.Param("year")
+	monthStr := c.Param("month")
+
+	// 1. 数値に変換できるかチェック
+	year, errY := strconv.Atoi(yearStr)
+	month, errM := strconv.Atoi(monthStr)
+
+	// 2. ロジックチェック（2000年以降、1〜12月など）
+	validationFailed := errY != nil || errM != nil || month < 1 || month > 12
+	if validationFailed {
+		year = currentYear
+		month = currentMonth
+	}
+
 	args := views.ShopArgs{
+		Year:         year,
+		Month:        month,
 		CurrentYear:  currentYear,
 		CurrentMonth: currentMonth,
 	}
 	content := views.ShopContent(args)
 
 	if isHxRequest {
-		// htmx経由: コンテンツ部分＋OOB更新用HTML
-		return render(c, http.StatusOK, views.ShopPart(args, content))
+		part := views.ShopPart(args, content)
+		if validationFailed {
+			notification := views.ShopError("入力された日付が不正です！")
+			return render(c, http.StatusUnprocessableEntity, templ.Join(part, notification))
+		} else {
+			// htmx経由: コンテンツ部分＋OOB更新用HTML
+			return render(c, http.StatusOK, part)
+		}
 	}
 
 	// ブラウザ直アクセス: ページ全体
-	return render(c, http.StatusOK, views.ShopFull(args, content))
+	if validationFailed {
+		return c.String(http.StatusBadRequest, "Invalid Date")
+	} else {
+		return render(c, http.StatusOK, views.ShopFull(args, content))
+	}
 }
 
 func handleHistoryRequest(c echo.Context) error {
