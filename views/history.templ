@@ -1,0 +1,472 @@
+package views
+
+type HistoryArgs struct {
+	CurrentYear  int
+	CurrentMonth int
+}
+
+// AccountFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
+templ HistoryFull(args HistoryArgs, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="ja">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+			<title>取引履歴 - Hachimoku</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"/>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+			<link rel="stylesheet" href="/assets/style.css"/>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+		</head>
+		<body x-data="kakeiboUI">
+			<div class="columns is-gapless is-fullheight">
+				<div class="column is-2-desktop is-hidden-touch sidebar">
+					@HistorySidebar(args)
+				</div>
+				<div class="column is-10-desktop" style="position: relative;">
+					@HistoryMobileHeader()
+					<main class="section px-3 py-5" :style="isSelectionMode ? 'padding-bottom: 100px;' : ''">
+						<div class="container" id="main-content">
+							@content
+						</div>
+					</main>
+				</div>
+			</div>
+			@HistoryBottomNav(args)
+		</body>
+	</html>
+}
+
+// AccountPartはhtmxリクエスト時（SPA遷移時）に返すHTMLの断片です
+templ HistoryPart(args HistoryArgs, content templ.Component) {
+	// メインコンテンツ（#main-content内に入る）
+	@content
+	// 以下は画面外で同時に書き換える要素（Out of Band Swaps）
+	<title hx-swap-oob="true">取引履歴 - Hachimoku</title>
+	@HistorySidebar(args)
+	@HistoryMobileHeader()
+	@HistoryBottomNav(args)
+}
+
+// ----------------------------------------------------------------------
+// ナビゲーション部品
+// ----------------------------------------------------------------------
+templ HistorySidebar(args HistoryArgs) {
+	<aside id="sidebar-menu" class="menu sidebar-menu" hx-swap-oob="true">
+		<div class="is-flex is-align-items-center mb-5 px-2">
+			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
+			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
+		</div>
+		<ul class="menu-list">
+			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-wallet mr-2"></i>資産と負債</a></li>
+			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-chart-line mr-2"></i>1ヶ月の収支</a></li>
+			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>連携ショップ</a></li>
+			<li>
+				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={ "is-active" }>
+					<i class="fas fa-history mr-2"></i>取引履歴
+					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
+				</a>
+			</li>
+		</ul>
+	</aside>
+}
+
+templ HistoryMobileHeader() {
+	<header id="mobile-header" class="app-header p-3 is-hidden-desktop" hx-swap-oob="true">
+		<div class="container is-flex is-justify-content-space-between is-align-items-center">
+			<h1 class="title is-5 mb-0">
+				<span>取引履歴</span>
+			</h1>
+			<button class="button is-primary is-rounded is-small">
+				<span class="icon"><i class="fas fa-plus"></i></span>
+				<span>記帳</span>
+			</button>
+		</div>
+	</header>
+}
+
+templ HistoryBottomNav(args HistoryArgs) {
+	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
+		<div class={ "nav-item" } hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>口座</span></div>
+		<div class={ "nav-item" } hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>収支</span></div>
+		<div class={ "nav-item" } hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>ショップ</span></div>
+		<div class={ "nav-item", "is-active" } hx-get="/history" hx-target="#main-content" hx-push-url="true">
+			<div style="position: relative;">
+				<i class="fas fa-history"></i>
+				<span class="tag is-danger is-rounded" style="position: absolute; top: -5px; right: -10px; height: 16px; min-width: 16px; font-size: 0.6rem; padding: 0 4px;">2</span>
+			</div>
+			<span>履歴</span>
+		</div>
+	</nav>
+}
+
+templ HistoryContent(args HistoryArgs) {
+	<div>
+		<div class="level mb-4 is-mobile">
+			<div class="level-left">
+				<h2 class="title is-4 is-hidden-touch mb-0">取引履歴</h2>
+				<h2 class="title is-5 is-hidden-desktop mb-0">取引</h2>
+			</div>
+			<div class="level-right">
+				<div class="buttons">
+					<button class="button is-small is-danger is-light" x-show="isSelectionMode" x-transition="true" x-on:click="selectedTransactionIds = []">
+						<span class="icon is-small"><i class="fas fa-times"></i></span>
+						<span>キャンセル</span>
+					</button>
+					<button class="button is-small is-hidden-desktop" x-show="!isSelectionMode" :class="isHistoryFilterActive ? 'is-info is-light' : 'is-white'" x-on:click="isFilterPanelOpen = !isFilterPanelOpen">
+						<span class="icon is-small"><i class="fas fa-filter"></i></span>
+						<span>絞り込み</span>
+						<span x-show="isHistoryFilterActive" class="tag is-info is-rounded ml-1" style="height: 1.5em;">ON</span>
+					</button>
+					<button class="button is-primary is-small is-rounded is-hidden-touch" x-show="!isSelectionMode">
+						<span class="icon"><i class="fas fa-plus"></i></span>
+						<span>新規</span>
+					</button>
+				</div>
+			</div>
+		</div>
+		<div x-show="isFilterPanelOpen && !isSelectionMode" x-transition="true" class="filter-panel p-4 mb-4 is-hidden-desktop">
+			<div class="columns is-multiline is-mobile is-vcentered">
+				<div class="column is-6-mobile">
+					<div class="field">
+						<label class="label is-small">状態</label>
+						<div class="control has-icons-left">
+							<div class="select is-small is-fullwidth" :class="historyFilters.status !== 'all' ? 'is-warning' : ''">
+								<select x-model="historyFilters.status">
+									<option value="all">すべて</option>
+									<option value="pending">未確定のみ</option>
+									<option value="confirmed">確定済みのみ</option>
+								</select>
+							</div>
+							<span class="icon is-small is-left"><i class="fas fa-check-circle"></i></span>
+						</div>
+					</div>
+				</div>
+				<div class="column is-6-mobile">
+					<div class="field">
+						<label class="label is-small">対象月</label>
+						<div class="control"><input type="month" class="input is-small is-fullwidth" x-model="historyFilters.month"/></div>
+					</div>
+				</div>
+				<div class="column is-6-mobile">
+					<div class="field">
+						<label class="label is-small">元 (From)</label>
+						<div class="control">
+							<div class="select is-small is-fullwidth" :class="historyFilters.fromId !== '' ? 'is-info' : ''">
+								<select x-model="historyFilters.fromId">
+									<option value="">すべて</option>
+									<option value="unclassified">⚠ 未分類</option>
+									<optgroup label="口座・カテゴリ">
+										<option value="1">財布(現金)</option>
+										<option value="2">三菱UFJ銀行</option>
+										<option value="3">楽天カード</option>
+										<option value="4">PayPay</option>
+										<option value="10">食費</option>
+										<option value="11">日用品</option>
+										<option value="20">給与</option>
+									</optgroup>
+									<optgroup label="ショップ">
+										<option value="Amazon.co.jp">Amazon.co.jp</option>
+										<option value="楽天市場">楽天市場</option>
+										<option value="Yahoo!ショッピング">Yahoo!ショッピング</option>
+									</optgroup>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="column is-6-mobile">
+					<div class="field">
+						<label class="label is-small">先 (To)</label>
+						<div class="control">
+							<div class="select is-small is-fullwidth" :class="historyFilters.toId !== '' ? 'is-info' : ''">
+								<select x-model="historyFilters.toId">
+									<option value="">すべて</option>
+									<option value="unclassified">⚠ 未分類</option>
+									<optgroup label="口座・カテゴリ">
+										<option value="1">財布(現金)</option>
+										<option value="2">三菱UFJ銀行</option>
+										<option value="3">楽天カード</option>
+										<option value="4">PayPay</option>
+										<option value="10">食費</option>
+										<option value="11">日用品</option>
+										<option value="20">給与</option>
+									</optgroup>
+									<optgroup label="ショップ">
+										<option value="Amazon.co.jp">Amazon.co.jp</option>
+										<option value="楽天市場">楽天市場</option>
+										<option value="Yahoo!ショッピング">Yahoo!ショッピング</option>
+									</optgroup>
+								</select>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="column is-12-mobile has-text-right">
+					<div class="buttons is-right">
+						<button class="button is-small is-light" x-on:click="resetHistoryFilters" :disabled="!isHistoryFilterActive">
+							<span class="icon"><i class="fas fa-times"></i></span><span>クリア</span>
+						</button>
+						<button class="button is-small is-info"><span class="icon"><i class="fas fa-search"></i></span><span>検索</span></button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="is-hidden-desktop">
+			<div class="is-flex is-align-items-stretch">
+				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div
+					class="history-card is-flex-grow-1"
+					style="min-width: 0;"
+					:class="selectedTransactionIds.includes('tx-1') ? 'has-background-light border-primary' : ''"
+					x-on:touchstart="startPress('tx-1')"
+					x-on:touchend="cancelPress()"
+					x-on:touchmove="cancelPress()"
+					x-on:click="handleRowClick('tx-1', $event)"
+				>
+					<div class="is-flex is-justify-content-space-between is-align-items-start mb-2">
+						<div class="is-flex is-align-items-center">
+							<input x-show="isSelectionMode" type="checkbox" class="checkbox mr-2" style="transform: scale(1.2);" value="tx-1" x-model="selectedTransactionIds"/>
+							<span class="tag is-light mr-1">2026-02-20</span>
+						</div>
+						<span class="has-text-weight-bold is-size-5">¥245,000</span>
+					</div>
+					<p class="is-size-6 mb-2">今月分給与</p>
+					<div class="is-flex is-align-items-center is-size-7 has-text-grey">
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-out-alt mr-1"></i><span>給与</span>
+						</div>
+						<i class="fas fa-long-arrow-alt-right mx-2"></i>
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-in-alt mr-1"></i><span>三菱UFJ銀行</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="is-flex is-align-items-stretch">
+				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div
+					class="history-card is-flex-grow-1"
+					style="min-width: 0;"
+					:class="selectedTransactionIds.includes('tx-2') ? 'has-background-light border-primary' : ''"
+					x-on:touchstart="startPress('tx-2')"
+					x-on:touchend="cancelPress()"
+					x-on:touchmove="cancelPress()"
+					x-on:click="handleRowClick('tx-2', $event)"
+				>
+					<div class="is-flex is-justify-content-space-between is-align-items-start mb-2">
+						<div class="is-flex is-align-items-center">
+							<input x-show="isSelectionMode" type="checkbox" class="checkbox mr-2" style="transform: scale(1.2);" value="tx-2" x-model="selectedTransactionIds"/>
+							<span class="tag is-light mr-1">2026-02-22</span>
+						</div>
+						<span class="has-text-weight-bold is-size-5">¥4,500</span>
+					</div>
+					<p class="is-size-6 mb-2">スーパー（食品と日用品）</p>
+					<div class="is-flex is-align-items-center is-size-7 has-text-grey">
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-out-alt mr-1"></i><span>楽天カード</span>
+						</div>
+						<i class="fas fa-long-arrow-alt-right mx-2"></i>
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-in-alt mr-1"></i><span>食費</span><span class="is-size-7 has-text-grey-light">他1件</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="is-flex is-align-items-stretch">
+				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div
+					class="history-card is-pending is-flex-grow-1"
+					style="min-width: 0;"
+					:class="selectedTransactionIds.includes('tx-3') ? 'has-background-warning-light border-primary' : ''"
+					x-on:touchstart="startPress('tx-3')"
+					x-on:touchend="cancelPress()"
+					x-on:touchmove="cancelPress()"
+					x-on:click="handleRowClick('tx-3', $event)"
+				>
+					<div class="is-flex is-justify-content-space-between is-align-items-start mb-2">
+						<div class="is-flex is-align-items-center">
+							<input x-show="isSelectionMode" type="checkbox" class="checkbox mr-2" style="transform: scale(1.2);" value="tx-3" x-model="selectedTransactionIds"/>
+							<span class="tag is-light mr-1">2026-02-22</span>
+							<span class="tag is-warning is-light is-rounded"><i class="fas fa-exclamation-triangle mr-1"></i>確認</span>
+						</div>
+						<span class="has-text-weight-bold is-size-5">¥3,580</span>
+					</div>
+					<p class="is-size-6 mb-2">AMAZON.CO.JP (自動連携)</p>
+					<div class="is-flex is-align-items-center is-size-7 has-text-grey mb-2">
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-out-alt mr-1"></i><span>Amazon.co.jp</span>
+						</div>
+						<i class="fas fa-long-arrow-alt-right mx-2"></i>
+						<div class="has-background-light px-2 py-1 is-rounded has-background-warning-light has-text-warning-dark">
+							<i class="fas fa-sign-in-alt mr-1"></i><span>未分類</span>
+						</div>
+					</div>
+					<div x-show="!isSelectionMode" class="mt-2 pt-2" style="border-top: 1px dashed #dbdbdb;">
+						<button class="button is-small is-fullwidth is-warning is-light">
+							<span>分類を入力する</span><span class="icon is-small"><i class="fas fa-chevron-right"></i></span>
+						</button>
+					</div>
+				</div>
+			</div>
+			<div class="is-flex is-align-items-stretch">
+				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div
+					class="history-card is-pending is-flex-grow-1"
+					style="min-width: 0;"
+					:class="selectedTransactionIds.includes('tx-4') ? 'has-background-warning-light border-primary' : ''"
+					x-on:touchstart="startPress('tx-4')"
+					x-on:touchend="cancelPress()"
+					x-on:touchmove="cancelPress()"
+					x-on:click="handleRowClick('tx-4', $event)"
+				>
+					<div class="is-flex is-justify-content-space-between is-align-items-start mb-2">
+						<div class="is-flex is-align-items-center">
+							<input x-show="isSelectionMode" type="checkbox" class="checkbox mr-2" style="transform: scale(1.2);" value="tx-4" x-model="selectedTransactionIds"/>
+							<span class="tag is-light mr-1">2026-02-22</span>
+							<span class="tag is-warning is-light is-rounded"><i class="fas fa-exclamation-triangle mr-1"></i>確認</span>
+						</div>
+						<span class="has-text-weight-bold is-size-5">¥5,000</span>
+					</div>
+					<p class="is-size-6 mb-2">振込 アタラシ タロウ (自動連携)</p>
+					<div class="is-flex is-align-items-center is-size-7 has-text-grey mb-2">
+						<div class="has-background-light px-2 py-1 is-rounded has-background-warning-light has-text-warning-dark">
+							<i class="fas fa-sign-out-alt mr-1"></i><span>未分類</span>
+						</div>
+						<i class="fas fa-long-arrow-alt-right mx-2"></i>
+						<div class="has-background-light px-2 py-1 is-rounded">
+							<i class="fas fa-sign-in-alt mr-1"></i><span>三菱UFJ銀行</span>
+						</div>
+					</div>
+					<div x-show="!isSelectionMode" class="mt-2 pt-2" style="border-top: 1px dashed #dbdbdb;">
+						<button class="button is-small is-fullwidth is-warning is-light">
+							<span>分類を入力する</span><span class="icon is-small"><i class="fas fa-chevron-right"></i></span>
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="box p-0 is-hidden-touch" style="overflow: visible;">
+			<table class="table is-fullwidth is-hoverable">
+				<thead>
+					<tr>
+						<th style="width: 40px; text-align: center; vertical-align: middle;"></th>
+						<th style="width: 130px;">
+							<div class="table-header-content">
+								<span>日付</span>
+								<div class="dropdown is-right" :class="activeFilterDropdown === 'month' ? 'is-active' : ''">
+									<div class="dropdown-trigger">
+										<button class="th-dropdown-btn" :class="historyFilters.month !== '' ? 'is-filtering' : ''" x-on:click.stop="activeFilterDropdown = activeFilterDropdown === 'month' ? null : 'month'">
+											<i class="fas fa-filter"></i>
+										</button>
+									</div>
+									<div class="dropdown-menu" role="menu" x-on:click.outside="if(activeFilterDropdown === 'month') activeFilterDropdown = null">
+										<div class="dropdown-content p-3" style="width: max-content;">
+											<div class="field">
+												<label class="label is-small">対象月</label>
+												<div class="control"><input type="month" class="input is-small" x-model="historyFilters.month"/></div>
+											</div>
+											<div class="buttons is-right mt-2 mb-0">
+												<button class="button is-small is-light" x-on:click="historyFilters.month = ''; activeFilterDropdown = null">クリア</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</th>
+						<th>内容</th>
+						<th style="width: 18%;">
+							<div class="table-header-content">
+								<span>元（減）</span>
+								<div class="dropdown is-right" :class="activeFilterDropdown === 'from' ? 'is-active' : ''">
+									<div class="dropdown-trigger">
+										<button class="th-dropdown-btn" :class="historyFilters.fromId !== '' ? 'is-filtering' : ''" x-on:click.stop="activeFilterDropdown = activeFilterDropdown === 'from' ? null : 'from'">
+											<i class="fas fa-filter"></i>
+										</button>
+									</div>
+									<div class="dropdown-menu" role="menu" x-on:click.outside="if(activeFilterDropdown === 'from') activeFilterDropdown = null">
+										<div class="dropdown-content" style="max-height: 300px; overflow-y: auto;">
+											<a class="dropdown-item" :class="historyFilters.fromId === '' ? 'is-active' : ''" x-on:click="historyFilters.fromId = ''; activeFilterDropdown = null">すべて</a>
+											<a class="dropdown-item" :class="historyFilters.fromId === 'unclassified' ? 'is-active' : ''" x-on:click="historyFilters.fromId = 'unclassified'; activeFilterDropdown = null">⚠ 未分類</a>
+											<hr class="dropdown-divider"/>
+											<div class="dropdown-item has-text-grey is-size-7 py-1">口座・カテゴリ</div>
+											<a class="dropdown-item" style="padding-left: 1.5rem;" :class="historyFilters.fromId == '1' ? 'is-active' : ''" x-on:click="historyFilters.fromId = '1'; activeFilterDropdown = null">財布(現金)</a>
+											<a class="dropdown-item" style="padding-left: 1.5rem;" :class="historyFilters.fromId == '2' ? 'is-active' : ''" x-on:click="historyFilters.fromId = '2'; activeFilterDropdown = null">三菱UFJ銀行</a>
+											<hr class="dropdown-divider"/>
+											<div class="dropdown-item has-text-grey is-size-7 py-1">ショップ</div>
+											<a class="dropdown-item" style="padding-left: 1.5rem;" :class="historyFilters.fromId === 'Amazon.co.jp' ? 'is-active' : ''" x-on:click="historyFilters.fromId = 'Amazon.co.jp'; activeFilterDropdown = null">Amazon.co.jp</a>
+										</div>
+									</div>
+								</div>
+							</div>
+						</th>
+						<th style="width: 18%;">
+							<div class="table-header-content">
+								<span>先（増）</span>
+								<div class="dropdown is-right" :class="activeFilterDropdown === 'to' ? 'is-active' : ''">
+									<div class="dropdown-trigger">
+										<button class="th-dropdown-btn" :class="historyFilters.toId !== '' ? 'is-filtering' : ''" x-on:click.stop="activeFilterDropdown = activeFilterDropdown === 'to' ? null : 'to'">
+											<i class="fas fa-filter"></i>
+										</button>
+									</div>
+									<div class="dropdown-menu" role="menu" x-on:click.outside="if(activeFilterDropdown === 'to') activeFilterDropdown = null">
+										<div class="dropdown-content" style="max-height: 300px; overflow-y: auto;">
+											<a class="dropdown-item" :class="historyFilters.toId === '' ? 'is-active' : ''" x-on:click="historyFilters.toId = ''; activeFilterDropdown = null">すべて</a>
+											<a class="dropdown-item" :class="historyFilters.toId === 'unclassified' ? 'is-active' : ''" x-on:click="historyFilters.toId = 'unclassified'; activeFilterDropdown = null">⚠ 未分類</a>
+											<hr class="dropdown-divider"/>
+											<div class="dropdown-item has-text-grey is-size-7 py-1">口座・カテゴリ</div>
+											<a class="dropdown-item" style="padding-left: 1.5rem;" :class="historyFilters.toId == '10' ? 'is-active' : ''" x-on:click="historyFilters.toId = '10'; activeFilterDropdown = null">食費</a>
+										</div>
+									</div>
+								</div>
+							</div>
+						</th>
+						<th class="has-text-right">金額</th>
+						<th style="width: 80px; text-align: center;">
+							<div class="dropdown is-right" :class="activeFilterDropdown === 'status' ? 'is-active' : ''">
+								<div class="dropdown-trigger">
+									<button class="th-dropdown-btn" :class="historyFilters.status !== 'all' ? 'is-filtering' : ''" x-on:click.stop="activeFilterDropdown = activeFilterDropdown === 'status' ? null : 'status'">
+										<i class="fas fa-filter"></i>
+									</button>
+								</div>
+								<div class="dropdown-menu" role="menu" x-on:click.outside="if(activeFilterDropdown === 'status') activeFilterDropdown = null">
+									<div class="dropdown-content">
+										<a class="dropdown-item" :class="historyFilters.status === 'all' ? 'is-active' : ''" x-on:click="historyFilters.status = 'all'; activeFilterDropdown = null">すべて</a>
+										<a class="dropdown-item" :class="historyFilters.status === 'pending' ? 'is-active' : ''" x-on:click="historyFilters.status = 'pending'; activeFilterDropdown = null">未確定のみ</a>
+										<a class="dropdown-item" :class="historyFilters.status === 'confirmed' ? 'is-active' : ''" x-on:click="historyFilters.status = 'confirmed'; activeFilterDropdown = null">確定済みのみ</a>
+									</div>
+								</div>
+							</div>
+						</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr :class="selectedTransactionIds.includes('tx-1') ? 'has-background-light' : ''" x-on:click="handleRowClick('tx-1', $event)" style="cursor: pointer;">
+						<td style="text-align: center; vertical-align: middle;"><input type="checkbox" class="checkbox" value="tx-1" x-model="selectedTransactionIds"/></td>
+						<td style="width: 120px; vertical-align: middle;">2026-02-20</td>
+						<td style="vertical-align: middle;"><span>今月分給与</span></td>
+						<td style="vertical-align: middle;"><div class="tag is-light is-danger mb-1"><span>給与</span></div></td>
+						<td style="vertical-align: middle;"><div class="tag is-light is-success mb-1"><span>三菱UFJ銀行</span></div></td>
+						<td class="has-text-right has-text-weight-bold" style="width: 150px; vertical-align: middle;">¥245,000</td>
+						<td style="text-align: center; vertical-align: middle;">
+							<button class="button is-small is-rounded is-white" :disabled="isSelectionMode"><span class="icon is-small"><i class="fas fa-ellipsis-h"></i></span></button>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+		<div class="selection-action-bar" x-show="isSelectionMode" x-transition="true">
+			<div class="container is-flex is-justify-content-space-between is-align-items-center">
+				<div>
+					<span class="has-text-weight-bold is-size-5" x-text="selectedTransactionIds.length + '件'"></span>
+					<span class="has-text-grey ml-1">を選択中</span>
+				</div>
+				<button class="button is-primary is-rounded" :disabled="selectedTransactionIds.length < 2">
+					<span class="icon"><i class="fas fa-object-group"></i></span>
+					<span class="is-hidden-mobile">選択したデータを1つにまとめる</span>
+					<span class="is-hidden-tablet">まとめる</span>
+				</button>
+			</div>
+		</div>
+	</div>
+}

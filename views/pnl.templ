@@ -1,0 +1,160 @@
+package views
+
+type PNLArgs struct {
+	CurrentYear  int
+	CurrentMonth int
+}
+
+// PNLFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
+templ PNLFull(args PNLArgs, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="ja">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+			<title>1ヶ月の収支 - Hachimoku</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"/>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+			<link rel="stylesheet" href="/assets/style.css"/>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+		</head>
+		<body x-data="kakeiboUI">
+			<div class="columns is-gapless is-fullheight">
+				<div class="column is-2-desktop is-hidden-touch sidebar">
+					@PNLSidebar(args)
+				</div>
+				<div class="column is-10-desktop" style="position: relative;">
+					@PNLMobileHeader()
+					<main class="section px-3 py-5" :style="isSelectionMode ? 'padding-bottom: 100px;' : ''">
+						<div class="container" id="main-content">
+							@content
+						</div>
+					</main>
+				</div>
+			</div>
+			@PNLBottomNav(args)
+		</body>
+	</html>
+}
+
+// PNLPartはhtmxリクエスト時（SPA遷移時）に返すHTMLの断片です
+templ PNLPart(args PNLArgs, content templ.Component) {
+	// メインコンテンツ（#main-content内に入る）
+	@content
+	// 以下は画面外で同時に書き換える要素（Out of Band Swaps）
+	<title hx-swap-oob="true">1ヶ月の収支 - Hachimoku</title>
+	@PNLSidebar(args)
+	@PNLMobileHeader()
+	@PNLBottomNav(args)
+}
+
+// ----------------------------------------------------------------------
+// ナビゲーション部品
+// ----------------------------------------------------------------------
+templ PNLSidebar(args PNLArgs) {
+	<aside id="sidebar-menu" class="menu sidebar-menu" hx-swap-oob="true">
+		<div class="is-flex is-align-items-center mb-5 px-2">
+			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
+			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
+		</div>
+		<ul class="menu-list">
+			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-wallet mr-2"></i>資産と負債</a></li>
+			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={ "is-active" }><i class="fas fa-chart-line mr-2"></i>1ヶ月の収支</a></li>
+			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>連携ショップ</a></li>
+			<li>
+				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={  }>
+					<i class="fas fa-history mr-2"></i>取引履歴
+					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
+				</a>
+			</li>
+		</ul>
+	</aside>
+}
+
+templ PNLMobileHeader() {
+	<header id="mobile-header" class="app-header p-3 is-hidden-desktop" hx-swap-oob="true">
+		<div class="container is-flex is-justify-content-space-between is-align-items-center">
+			<h1 class="title is-5 mb-0">
+				<span>1ヶ月の収支</span>
+			</h1>
+			<button class="button is-primary is-rounded is-small">
+				<span class="icon"><i class="fas fa-plus"></i></span>
+				<span>記帳</span>
+			</button>
+		</div>
+	</header>
+}
+
+templ PNLBottomNav(args PNLArgs) {
+	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
+		<div class={ "nav-item" } hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>口座</span></div>
+		<div class={ "nav-item", "is-active" } hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>収支</span></div>
+		<div class={ "nav-item" } hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>ショップ</span></div>
+		<div class={ "nav-item" } hx-get="/history" hx-target="#main-content" hx-push-url="true">
+			<div style="position: relative;">
+				<i class="fas fa-history"></i>
+				<span class="tag is-danger is-rounded" style="position: absolute; top: -5px; right: -10px; height: 16px; min-width: 16px; font-size: 0.6rem; padding: 0 4px;">2</span>
+			</div>
+			<span>履歴</span>
+		</div>
+	</nav>
+}
+
+templ PNLContent(args PNLArgs) {
+	<div>
+		<div class="level is-mobile mb-5">
+			<div class="level-left">
+				<button class="button is-white"><span class="icon"><i class="fas fa-chevron-left"></i></span></button>
+			</div>
+			<div class="level-item has-text-centered">
+				<h2 class="title is-5 mb-0">2023年2月の収支</h2>
+			</div>
+			<div class="level-right">
+				<button class="button is-white"><span class="icon"><i class="fas fa-chevron-right"></i></span></button>
+			</div>
+		</div>
+		<div class="box mb-5">
+			<div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+				<span class="has-text-grey">収入合計</span>
+				<span class="has-text-weight-bold is-size-5 has-text-success">¥250,000</span>
+			</div>
+			<div class="is-flex is-justify-content-space-between is-align-items-center mb-3">
+				<span class="has-text-grey">支出合計</span>
+				<span class="has-text-weight-bold is-size-5 has-text-danger">¥30,000</span>
+			</div>
+			<hr class="my-3"/>
+			<div class="is-flex is-justify-content-space-between is-align-items-center">
+				<span class="has-text-weight-bold">収支差額</span>
+				<span class="title is-4 mb-0 has-text-info">¥220,000</span>
+			</div>
+		</div>
+		<div class="columns">
+			<div class="column is-6">
+				<h3 class="label">収入</h3>
+				<div class="account-row" x-on:click="filterHistoryByAccount('20')">
+					<span>給与</span>
+					<span class="has-text-weight-bold has-text-success">¥245,000</span>
+				</div>
+				<div class="account-row" x-on:click="filterHistoryByAccount('21')">
+					<span>副業収入</span>
+					<span class="has-text-weight-bold has-text-success">¥5,000</span>
+				</div>
+			</div>
+			<div class="column is-6">
+				<h3 class="label">支出</h3>
+				<div class="account-row" x-on:click="filterHistoryByAccount('10')">
+					<span>食費</span>
+					<span class="has-text-weight-bold has-text-danger">¥15,000</span>
+				</div>
+				<div class="account-row" x-on:click="filterHistoryByAccount('11')">
+					<span>日用品</span>
+					<span class="has-text-weight-bold has-text-danger">¥5,000</span>
+				</div>
+				<div class="account-row" x-on:click="filterHistoryByAccount('12')">
+					<span>家賃</span>
+					<span class="has-text-weight-bold has-text-danger">¥10,000</span>
+				</div>
+			</div>
+		</div>
+	</div>
+}

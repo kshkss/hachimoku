@@ -1,0 +1,140 @@
+package views
+
+type AccountArgs struct {
+	CurrentYear  int
+	CurrentMonth int
+}
+
+// AccountFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
+templ AccountFull(args AccountArgs, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="ja">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+			<title>資産と負債 - Hachimoku</title>
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"/>
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+			<link rel="stylesheet" href="/assets/style.css"/>
+			<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+		</head>
+		<body x-data="kakeiboUI">
+			<div class="columns is-gapless is-fullheight">
+				<div class="column is-2-desktop is-hidden-touch sidebar">
+					@AccountSidebar(args)
+				</div>
+				<div class="column is-10-desktop" style="position: relative;">
+					@AccountMobileHeader()
+					<main class="section px-3 py-5" :style="isSelectionMode ? 'padding-bottom: 100px;' : ''">
+						<div class="container" id="main-content">
+							@content
+						</div>
+					</main>
+				</div>
+			</div>
+			@AccountBottomNav(args)
+		</body>
+	</html>
+}
+
+// AccountPartはhtmxリクエスト時（SPA遷移時）に返すHTMLの断片です
+templ AccountPart(args AccountArgs, content templ.Component) {
+	// メインコンテンツ（#main-content内に入る）
+	@content
+	// 以下は画面外で同時に書き換える要素（Out of Band Swaps）
+	<title hx-swap-oob="true">資産と負債 - Hachimoku</title>
+	@AccountSidebar(args)
+	@AccountMobileHeader()
+	@AccountBottomNav(args)
+}
+
+// ----------------------------------------------------------------------
+// ナビゲーション部品
+// ----------------------------------------------------------------------
+templ AccountSidebar(args AccountArgs) {
+	<aside id="sidebar-menu" class="menu sidebar-menu" hx-swap-oob="true">
+		<div class="is-flex is-align-items-center mb-5 px-2">
+			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
+			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
+		</div>
+		<ul class="menu-list">
+			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={ "is-active" }><i class="fas fa-wallet mr-2"></i>資産と負債</a></li>
+			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-chart-line mr-2"></i>1ヶ月の収支</a></li>
+			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>連携ショップ</a></li>
+			<li>
+				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={  }>
+					<i class="fas fa-history mr-2"></i>取引履歴
+					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
+				</a>
+			</li>
+		</ul>
+	</aside>
+}
+
+templ AccountMobileHeader() {
+	<header id="mobile-header" class="app-header p-3 is-hidden-desktop" hx-swap-oob="true">
+		<div class="container is-flex is-justify-content-space-between is-align-items-center">
+			<h1 class="title is-5 mb-0">
+				<span>資産と負債</span>
+			</h1>
+			<button class="button is-primary is-rounded is-small">
+				<span class="icon"><i class="fas fa-plus"></i></span>
+				<span>記帳</span>
+			</button>
+		</div>
+	</header>
+}
+
+templ AccountBottomNav(args AccountArgs) {
+	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
+		<div class={ "nav-item", "is-active" } hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>口座</span></div>
+		<div class={ "nav-item" } hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>収支</span></div>
+		<div class={ "nav-item" } hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>ショップ</span></div>
+		<div class={ "nav-item" } hx-get="/history" hx-target="#main-content" hx-push-url="true">
+			<div style="position: relative;">
+				<i class="fas fa-history"></i>
+				<span class="tag is-danger is-rounded" style="position: absolute; top: -5px; right: -10px; height: 16px; min-width: 16px; font-size: 0.6rem; padding: 0 4px;">2</span>
+			</div>
+			<span>履歴</span>
+		</div>
+	</nav>
+}
+
+templ AccountContent(args AccountArgs) {
+	<div>
+		<h2 class="title is-4 is-hidden-touch mb-5">資産と負債</h2>
+		<div class="tabs is-toggle is-fullwidth is-small mb-4">
+			<ul>
+				<li class="is-active"><a>すべて</a></li>
+				<li><a>資産</a></li>
+				<li><a>負債</a></li>
+			</ul>
+		</div>
+		<div class="columns is-multiline">
+			<div class="column is-12-mobile is-6-tablet is-4-desktop">
+				<div class="account-row" x-on:click="filterHistoryByAccount('1')">
+					<div><p class="has-text-weight-bold">財布(現金)</p><p class="is-size-7 has-text-grey">資産</p></div>
+					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥12,500</p></div>
+				</div>
+			</div>
+			<div class="column is-12-mobile is-6-tablet is-4-desktop">
+				<div class="account-row" x-on:click="filterHistoryByAccount('2')">
+					<div><p class="has-text-weight-bold">三菱UFJ銀行</p><p class="is-size-7 has-text-grey">資産</p></div>
+					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥185,000</p></div>
+				</div>
+			</div>
+			<div class="column is-12-mobile is-6-tablet is-4-desktop">
+				<div class="account-row" x-on:click="filterHistoryByAccount('3')">
+					<div><p class="has-text-weight-bold">楽天カード</p><p class="is-size-7 has-text-grey">負債</p></div>
+					<div class="has-text-right"><p class="title is-5 mb-0 has-text-danger">¥45,000</p></div>
+				</div>
+			</div>
+			<div class="column is-12-mobile is-6-tablet is-4-desktop">
+				<div class="account-row" x-on:click="filterHistoryByAccount('4')">
+					<div><p class="has-text-weight-bold">PayPay</p><p class="is-size-7 has-text-grey">資産</p></div>
+					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥2,500</p></div>
+				</div>
+			</div>
+		</div>
+	</div>
+}
