@@ -100,7 +100,7 @@ templ HistoryMobileHeader() {
 }
 
 templ HistoryBottomNav(args HistoryArgs) {
-	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
+	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition>
 		<div class="nav-item" hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>{ AccountsShortTitle }</span></div>
 		<div class="nav-item" hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>{ PNLShortTitle }</span></div>
 		<div class="nav-item" hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>{ ShopShortTitle }</span></div>
@@ -222,7 +222,7 @@ templ HistoryContent(args HistoryArgs) {
 		</div>
 		<div class="is-hidden-desktop">
 			<div class="is-flex is-align-items-stretch">
-				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div x-show="isSelectionMode" x-transition class="mr-3 is-flex is-align-items-center"></div>
 				<div
 					class="history-card is-flex-grow-1"
 					style="min-width: 0;"
@@ -252,7 +252,7 @@ templ HistoryContent(args HistoryArgs) {
 				</div>
 			</div>
 			<div class="is-flex is-align-items-stretch">
-				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div x-show="isSelectionMode" x-transition class="mr-3 is-flex is-align-items-center"></div>
 				<div
 					class="history-card is-flex-grow-1"
 					style="min-width: 0;"
@@ -282,7 +282,7 @@ templ HistoryContent(args HistoryArgs) {
 				</div>
 			</div>
 			<div class="is-flex is-align-items-stretch">
-				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div x-show="isSelectionMode" x-transition class="mr-3 is-flex is-align-items-center"></div>
 				<div
 					class="history-card is-pending is-flex-grow-1"
 					style="min-width: 0;"
@@ -318,7 +318,7 @@ templ HistoryContent(args HistoryArgs) {
 				</div>
 			</div>
 			<div class="is-flex is-align-items-stretch">
-				<div x-show="isSelectionMode" x-transition="true" class="mr-3 is-flex is-align-items-center"></div>
+				<div x-show="isSelectionMode" x-transition class="mr-3 is-flex is-align-items-center"></div>
 				<div
 					class="history-card is-pending is-flex-grow-1"
 					style="min-width: 0;"
@@ -463,7 +463,7 @@ templ HistoryContent(args HistoryArgs) {
 				</tbody>
 			</table>
 		</div>
-		<div class="selection-action-bar" x-show="isSelectionMode" x-transition="true">
+		<div class="selection-action-bar" x-show="isSelectionMode" x-transition>
 			<div class="container is-flex is-justify-content-space-between is-align-items-center">
 				<div>
 					<span class="has-text-weight-bold is-size-5" x-text="selectedTransactionIds.length + '件'"></span>
