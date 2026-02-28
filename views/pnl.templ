@@ -187,26 +187,26 @@ templ PNLContent(args PNLArgs) {
 		<div class="columns">
 			<div class="column is-6">
 				<h3 class="label">収入</h3>
-				<div class="account-row" x-on:click="filterHistoryByAccount('20')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>給与</span>
 					<span class="has-text-weight-bold has-text-success">¥245,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('21')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>副業収入</span>
 					<span class="has-text-weight-bold has-text-success">¥5,000</span>
 				</div>
 			</div>
 			<div class="column is-6">
 				<h3 class="label">支出</h3>
-				<div class="account-row" x-on:click="filterHistoryByAccount('10')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>食費</span>
 					<span class="has-text-weight-bold has-text-danger">¥15,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('11')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>日用品</span>
 					<span class="has-text-weight-bold has-text-danger">¥5,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('12')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>家賃</span>
 					<span class="has-text-weight-bold has-text-danger">¥10,000</span>
 				</div>
