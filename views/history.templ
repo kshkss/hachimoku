@@ -8,6 +8,14 @@ var HistoryShortTitle = "履歴"
 type HistoryArgs struct {
 	CurrentYear  int
 	CurrentMonth int
+	Year         int
+	Month        int
+	From         string
+	To           string
+}
+
+func (args HistoryArgs) is_filtered() bool {
+	return (args.Year != 0 && args.Month != 0) || args.From != "" || args.To != ""
 }
 
 // AccountFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
