@@ -1,5 +1,7 @@
 package views
 
+import "fmt"
+
 var HistoryTitle = "取引履歴"
 var HistoryShortTitle = "履歴"
 
@@ -62,7 +64,7 @@ templ HistorySidebar(args HistoryArgs) {
 		</div>
 		<ul class="menu-list">
 			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
-			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
+			<li><a hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
 			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
 			<li>
 				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={ "is-active" }>
@@ -91,7 +93,7 @@ templ HistoryMobileHeader() {
 templ HistoryBottomNav(args HistoryArgs) {
 	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
 		<div class="nav-item" hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>{ AccountsShortTitle }</span></div>
-		<div class="nav-item" hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>{ PNLShortTitle }</span></div>
+		<div class="nav-item" hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>{ PNLShortTitle }</span></div>
 		<div class="nav-item" hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>{ ShopShortTitle }</span></div>
 		<div class={ "nav-item", "is-active" } hx-get="/history" hx-target="#main-content" hx-push-url="true">
 			<div style="position: relative;">
