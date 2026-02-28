@@ -64,16 +64,35 @@ templ AccountSidebar(args AccountArgs) {
 			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
+		<p class="menu-label">サマリー</p>
 		<ul class="menu-list">
 			<li><a hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true" hx-disable?={ args.Type == "all" } class={ "is-active" }><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
+		</ul>
+		<p class="menu-label">
+			<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+		</p>
+		<p class="menu-label mt-5">現金</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/1" hx-target="#main-content" hx-push-url="true">財布</a></li>
+		</ul>
+		<p class="menu-label mt-5">銀行</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/2" hx-target="#main-content" hx-push-url="true">三菱UFJ銀行</a></li>
+		</ul>
+		<p class="menu-label mt-5">カード</p>
+		<ul class="menu-list">
 			<li>
-				<a hx-get="/history" hx-target="#main-content" hx-push-url="true">
-					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+				<a hx-get="/history/3" hx-target="#main-content" hx-push-url="true">
+					楽天カード
 					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
 				</a>
 			</li>
+		</ul>
+		<p class="menu-label mt-5">食費</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/10" hx-target="#main-content" hx-push-url="true">食費</a></li>
 		</ul>
 	</aside>
 }
@@ -137,25 +156,25 @@ templ AccountContent(args AccountArgs) {
 		</div>
 		<div class="columns is-multiline">
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('1')">
+				<div class="account-row" hx-get="/history/1" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">財布(現金)</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥12,500</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('2')">
+				<div class="account-row" hx-get="/history/2" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">三菱UFJ銀行</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥185,000</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('3')">
+				<div class="account-row" hx-get="/history/3" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">楽天カード</p><p class="is-size-7 has-text-grey">負債</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-danger">¥45,000</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('4')">
+				<div class="account-row" hx-get="/history/4" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">PayPay</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥2,500</p></div>
 				</div>

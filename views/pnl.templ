@@ -93,6 +93,7 @@ templ PNLSidebar(args PNLArgs) {
 			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
+		<p class="menu-label">サマリー</p>
 		<ul class="menu-list">
 			<li><a hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
 			<li>
@@ -105,12 +106,30 @@ templ PNLSidebar(args PNLArgs) {
 				><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a>
 			</li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
+		</ul>
+		<p class="menu-label">
+			<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+		</p>
+		<p class="menu-label mt-5">現金</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/1" hx-target="#main-content" hx-push-url="true">財布</a></li>
+		</ul>
+		<p class="menu-label mt-5">銀行</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/2" hx-target="#main-content" hx-push-url="true">三菱UFJ銀行</a></li>
+		</ul>
+		<p class="menu-label mt-5">カード</p>
+		<ul class="menu-list">
 			<li>
-				<a hx-get="/history" hx-target="#main-content" hx-push-url="true">
-					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+				<a hx-get="/history/3" hx-target="#main-content" hx-push-url="true">
+					楽天カード
 					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
 				</a>
 			</li>
+		</ul>
+		<p class="menu-label mt-5">食費</p>
+		<ul class="menu-list">
+			<li><a hx-get="/history/10" hx-target="#main-content" hx-push-url="true">食費</a></li>
 		</ul>
 	</aside>
 }
@@ -187,26 +206,26 @@ templ PNLContent(args PNLArgs) {
 		<div class="columns">
 			<div class="column is-6">
 				<h3 class="label">収入</h3>
-				<div class="account-row" x-on:click="filterHistoryByAccount('20')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>給与</span>
 					<span class="has-text-weight-bold has-text-success">¥245,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('21')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>副業収入</span>
 					<span class="has-text-weight-bold has-text-success">¥5,000</span>
 				</div>
 			</div>
 			<div class="column is-6">
 				<h3 class="label">支出</h3>
-				<div class="account-row" x-on:click="filterHistoryByAccount('10')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>食費</span>
 					<span class="has-text-weight-bold has-text-danger">¥15,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('11')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>日用品</span>
 					<span class="has-text-weight-bold has-text-danger">¥5,000</span>
 				</div>
-				<div class="account-row" x-on:click="filterHistoryByAccount('12')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span>家賃</span>
 					<span class="has-text-weight-bold has-text-danger">¥10,000</span>
 				</div>
