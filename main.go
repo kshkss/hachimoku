@@ -47,6 +47,7 @@ func main() {
 	e.GET("/pnl/:year/:month", handlePNLRequest)
 	e.GET("/shop/:year/:month", handleShopRequest)
 	e.GET("/history", handleHistoryRequest)
+	e.GET("/history/:account", handleHistoryRequest)
 
 	e.Logger.Fatal(e.Start(":8080"))
 }
@@ -180,6 +181,7 @@ func handleHistoryRequest(c echo.Context) error {
 	currentYear := today.Year()
 	currentMonth := int(today.Month())
 
+	account := c.Param("account")
 	from_ := c.QueryParam("from")
 	to_ := c.QueryParam("to")
 	monthStr := c.QueryParam("month")
@@ -196,6 +198,8 @@ func handleHistoryRequest(c echo.Context) error {
 	}
 
 	args := views.HistoryArgs{
+		Account:      account,
+		AccountName: "アカウント名",
 		CurrentYear:  currentYear,
 		CurrentMonth: currentMonth,
 		Year:         year,
