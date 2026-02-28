@@ -62,10 +62,10 @@ templ AccountSidebar(args AccountArgs) {
 		</div>
 		<ul class="menu-list">
 			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={ "is-active" }><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
-			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
-			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
+			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
+			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
 			<li>
-				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={  }>
+				<a hx-get="/history" hx-target="#main-content" hx-push-url="true">
 					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
 					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
 				</a>
