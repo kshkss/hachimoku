@@ -172,19 +172,19 @@ templ ShopContent(args ShopArgs) {
 		</div>
 		<div class="columns is-multiline">
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByShop('Amazon.co.jp')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span class="has-text-weight-bold">Amazon.co.jp</span>
 					<span class="has-text-weight-bold">¥15,800</span>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByShop('楽天市場')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span class="has-text-weight-bold">楽天市場</span>
 					<span class="has-text-weight-bold">¥4,200</span>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByShop('Yahoo!ショッピング')">
+				<div class="account-row" hx-get={ templ.URL(fmt.Sprintf("/history/20?month=%04d-%02d", args.Year, args.Month)) } hx-target="#main-content" hx-push-url="true">
 					<span class="has-text-weight-bold">Yahoo!ショッピング</span>
 					<span class="has-text-weight-bold">¥0</span>
 				</div>
