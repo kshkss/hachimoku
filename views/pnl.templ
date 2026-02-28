@@ -103,7 +103,7 @@ templ PNLSidebar(args PNLArgs) {
 					hx-disable?={ args.CurrentMonth == args.Month && args.CurrentYear == args.Year }
 				><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a>
 			</li>
-			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
+			<li><a hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
 			<li>
 				<a hx-get="/history" hx-target="#main-content" hx-push-url="true">
 					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
@@ -138,7 +138,7 @@ templ PNLBottomNav(args PNLArgs) {
 			hx-push-url="true"
 			hx-disable?={ args.CurrentMonth == args.Month && args.CurrentYear == args.Year }
 		><i class="fas fa-chart-line"></i><span>{ PNLShortTitle }</span></div>
-		<div class="nav-item" hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>{ ShopShortTitle }</span></div>
+		<div class="nav-item" hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>{ ShopShortTitle }</span></div>
 		<div class="nav-item" hx-get="/history" hx-target="#main-content" hx-push-url="true">
 			<div style="position: relative;">
 				<i class="fas fa-history"></i>
