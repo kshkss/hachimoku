@@ -15,7 +15,7 @@ templ PNLFull(args PNLArgs, content templ.Component) {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-			<title>1ヶ月の収支 - Hachimoku</title>
+			<title>{ PNLTitle } - Hachimoku</title>
 			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"/>
 			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
 			<link rel="stylesheet" href="/assets/style.css"/>
@@ -45,7 +45,7 @@ templ PNLPart(args PNLArgs, content templ.Component) {
 	// メインコンテンツ（#main-content内に入る）
 	@content
 	// 以下は画面外で同時に書き換える要素（Out of Band Swaps）
-	<title hx-swap-oob="true">1ヶ月の収支 - Hachimoku</title>
+	<title hx-swap-oob="true">{ PNLTitle } - Hachimoku</title>
 	@PNLSidebar(args)
 	@PNLMobileHeader()
 	@PNLBottomNav(args)
@@ -61,12 +61,12 @@ templ PNLSidebar(args PNLArgs) {
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
 		<ul class="menu-list">
-			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-wallet mr-2"></i>資産と負債</a></li>
-			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={ "is-active" }><i class="fas fa-chart-line mr-2"></i>1ヶ月の収支</a></li>
-			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>連携ショップ</a></li>
+			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
+			<li><a hx-get="/pnl" hx-target="#main-content" hx-push-url="true" class={ "is-active" }><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
+			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true" class={  }><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
 			<li>
 				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={  }>
-					<i class="fas fa-history mr-2"></i>取引履歴
+					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
 					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
 				</a>
 			</li>
@@ -78,7 +78,7 @@ templ PNLMobileHeader() {
 	<header id="mobile-header" class="app-header p-3 is-hidden-desktop" hx-swap-oob="true">
 		<div class="container is-flex is-justify-content-space-between is-align-items-center">
 			<h1 class="title is-5 mb-0">
-				<span>1ヶ月の収支</span>
+				<span>{ PNLTitle }</span>
 			</h1>
 			<button class="button is-primary is-rounded is-small">
 				<span class="icon"><i class="fas fa-plus"></i></span>
@@ -90,15 +90,15 @@ templ PNLMobileHeader() {
 
 templ PNLBottomNav(args PNLArgs) {
 	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
-		<div class={ "nav-item" } hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>口座</span></div>
-		<div class={ "nav-item", "is-active" } hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>収支</span></div>
-		<div class={ "nav-item" } hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>ショップ</span></div>
+		<div class={ "nav-item" } hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>{ AccountsShortTitle }</span></div>
+		<div class={ "nav-item", "is-active" } hx-get="/pnl" hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line"></i><span>{ PNLShortTitle }</span></div>
+		<div class={ "nav-item" } hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store"></i><span>{ ShopShortTitle }</span></div>
 		<div class={ "nav-item" } hx-get="/history" hx-target="#main-content" hx-push-url="true">
 			<div style="position: relative;">
 				<i class="fas fa-history"></i>
 				<span class="tag is-danger is-rounded" style="position: absolute; top: -5px; right: -10px; height: 16px; min-width: 16px; font-size: 0.6rem; padding: 0 4px;">2</span>
 			</div>
-			<span>履歴</span>
+			<span>{ HistoryShortTitle }</span>
 		</div>
 	</nav>
 }
