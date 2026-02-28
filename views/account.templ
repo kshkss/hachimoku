@@ -111,9 +111,27 @@ templ AccountContent(args AccountArgs) {
 		<h2 class="title is-4 is-hidden-touch mb-5">{ AccountsTitle }</h2>
 		<div class="tabs is-toggle is-fullwidth is-small mb-4">
 			<ul>
-				<li class="is-active"><a>すべて</a></li>
-				<li><a>資産</a></li>
-				<li><a>負債</a></li>
+				<li
+					class={ templ.KV("is-active", args.Type == "all") }
+					hx-get="/accounts/all"
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-disable?={ args.Type == "all" }
+				><a>すべて</a></li>
+				<li
+					class={ templ.KV("is-active", args.Type == "asset") }
+					hx-get="/accounts/asset"
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-disable?={ args.Type == "asset" }
+				><a>資産</a></li>
+				<li
+					class={ templ.KV("is-active", args.Type == "liability") }
+					hx-get="/accounts/liability"
+					hx-target="#main-content"
+					hx-push-url="true"
+					hx-disable?={ args.Type == "liability" }
+				><a>負債</a></li>
 			</ul>
 		</div>
 		<div class="columns is-multiline">
