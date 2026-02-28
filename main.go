@@ -3,9 +3,9 @@ package main
 import (
 	//"context"
 	"embed"
+	"fmt"
 	"net/http"
 	"strconv"
-	//"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -179,9 +179,29 @@ func handleHistoryRequest(c echo.Context) error {
 	today := time.Now()
 	currentYear := today.Year()
 	currentMonth := int(today.Month())
+
+	from_ := c.QueryParam("from")
+	to_ := c.QueryParam("to")
+	monthStr := c.QueryParam("month")
+
+	// 1. 数値に変換できるかチェック
+	var year, month int
+	_, err := fmt.Sscanf(monthStr, "%d-%d", &year, &month)
+
+	// 2. ロジックチェック（2000年以降、1〜12月など）
+	validationFailed := err != nil || month < 1 || month > 12
+	if validationFailed {
+		year = 0
+		month = 0
+	}
+
 	args := views.HistoryArgs{
 		CurrentYear:  currentYear,
 		CurrentMonth: currentMonth,
+		Year:         year,
+		Month:        month,
+		From:         from_,
+		To:           to_,
 	}
 	content := views.HistoryContent(args)
 
