@@ -137,25 +137,25 @@ templ AccountContent(args AccountArgs) {
 		</div>
 		<div class="columns is-multiline">
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('1')">
+				<div class="account-row" hx-get="/history/1" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">財布(現金)</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥12,500</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('2')">
+				<div class="account-row" hx-get="/history/2" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">三菱UFJ銀行</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥185,000</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('3')">
+				<div class="account-row" hx-get="/history/3" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">楽天カード</p><p class="is-size-7 has-text-grey">負債</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-danger">¥45,000</p></div>
 				</div>
 			</div>
 			<div class="column is-12-mobile is-6-tablet is-4-desktop">
-				<div class="account-row" x-on:click="filterHistoryByAccount('4')">
+				<div class="account-row" hx-get="/history/4" hx-target="#main-content" hx-push-url="true">
 					<div><p class="has-text-weight-bold">PayPay</p><p class="is-size-7 has-text-grey">資産</p></div>
 					<div class="has-text-right"><p class="title is-5 mb-0 has-text-success">¥2,500</p></div>
 				</div>
