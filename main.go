@@ -43,7 +43,7 @@ func main() {
 
 	// タブのルーティング
 	e.GET("/", handleAccountsRequest)
-	e.GET("/accounts", handleAccountsRequest)
+	e.GET("/accounts/:type", handleAccountsRequest)
 	e.GET("/pnl/:year/:month", handlePNLRequest)
 	e.GET("/shop", handleShopRequest)
 	e.GET("/history", handleHistoryRequest)
@@ -54,10 +54,17 @@ func main() {
 func handleAccountsRequest(c echo.Context) error {
 	// htmxからのリクエストかどうかで、返す外枠のコンポーネントを切り替える
 	isHxRequest := c.Request().Header.Get("HX-Request") == "true"
+	type_ := c.Param("type")
+	invalidType := !(type_ == "all" || type_ == "asset" || type_ == "liability")
+	if invalidType {
+		type_ = "all"
+	}
+
 	today := time.Now()
 	currentYear := today.Year()
 	currentMonth := int(today.Month())
 	args := views.AccountArgs{
+		Type:         type_,
 		CurrentYear:  currentYear,
 		CurrentMonth: currentMonth,
 	}

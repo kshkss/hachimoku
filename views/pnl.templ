@@ -93,7 +93,7 @@ templ PNLSidebar(args PNLArgs) {
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
 		<ul class="menu-list">
-			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
+			<li><a hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
 			<li>
 				<a
 					class="is-active"
@@ -130,7 +130,7 @@ templ PNLMobileHeader() {
 
 templ PNLBottomNav(args PNLArgs) {
 	<nav id="bottom-nav" class="bottom-nav is-hidden-desktop" hx-swap-oob="true" x-show="!isSelectionMode" x-transition="true">
-		<div class="nav-item" hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>{ AccountsShortTitle }</span></div>
+		<div class="nav-item" hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet"></i><span>{ AccountsShortTitle }</span></div>
 		<div
 			class={ "nav-item", "is-active" }
 			hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) }
