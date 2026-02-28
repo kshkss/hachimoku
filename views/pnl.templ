@@ -4,8 +4,38 @@ var PNLTitle = "1ヶ月の収支"
 var PNLShortTitle = "収支"
 
 type PNLArgs struct {
+	Year         int
+	Month        int
 	CurrentYear  int
 	CurrentMonth int
+}
+
+func (args PNLArgs) PrevYear() int {
+	if args.Month == 1 {
+		return args.Year - 1
+	}
+	return args.Year
+}
+
+func (args PNLArgs) PrevMonth() int {
+	if args.Month == 1 {
+		return 12
+	}
+	return args.Month - 1
+}
+
+func (args PNLArgs) NextYear() int {
+	if args.Month == 12 {
+		return args.Year + 1
+	}
+	return args.Year
+}
+
+func (args PNLArgs) NextMonth() int {
+	if args.Month == 12 {
+		return 1
+	}
+	return args.Month + 1
 }
 
 // PNLFullはページ全体のガワを定義します（初回アクセス時やリロード時に使用）
@@ -101,6 +131,12 @@ templ PNLBottomNav(args PNLArgs) {
 			<span>{ HistoryShortTitle }</span>
 		</div>
 	</nav>
+}
+
+templ PNLError(message string) {
+	<div id="toast-container" hx-swap-oob="afterbegin">
+		<div class="alert alert-danger">{ message }</div>
+	</div>
 }
 
 templ PNLContent(args PNLArgs) {
