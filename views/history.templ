@@ -63,7 +63,7 @@ templ HistorySidebar(args HistoryArgs) {
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
 		<ul class="menu-list">
-			<li><a hx-get="/accounts" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
+			<li><a hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
 			<li><a hx-get="/shop" hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
 			<li>
