@@ -115,7 +115,13 @@ templ HistoryBottomNav(args HistoryArgs) {
 }
 
 templ HistoryContent(args HistoryArgs) {
-	<div>
+	<div
+		if args.is_filtered() {
+			x-data="{show_filter_options: true, isSelectionMode: false}"
+		} else {
+			x-data="{show_filter_options: false, isSelectionMode: false}"
+		}
+	>
 		<div class="level mb-4 is-mobile">
 			<div class="level-left">
 				<h2 class="title is-4 is-hidden-touch mb-0">{ HistoryTitle }</h2>
@@ -127,6 +133,7 @@ templ HistoryContent(args HistoryArgs) {
 						class={ "button is-small is-hidden-desktop",
 					templ.KV("is-info is-light", args.is_filtered()),
 					templ.KV("is-white", !args.is_filtered()) }
+						x-on:click="show_filter_options = !show_filter_options"
 					>
 						<span class="icon is-small"><i class="fas fa-filter"></i></span>
 						<span>絞り込み</span>
@@ -137,7 +144,7 @@ templ HistoryContent(args HistoryArgs) {
 				</div>
 			</div>
 		</div>
-		<div class="filter-panel p-4 mb-4 is-hidden-desktop">
+		<div x-show="show_filter_options" x-transition class="filter-panel p-4 mb-4 is-hidden-desktop">
 			<form hx-get="/history" hx-target="#main-content" hx-push-url="true" hx-trigger="change">
 				<div class="columns is-multiline is-mobile is-vcentered">
 					<div class="column is-6-mobile">
