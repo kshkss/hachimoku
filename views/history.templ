@@ -73,16 +73,35 @@ templ HistorySidebar(args HistoryArgs) {
 			<span class="icon has-text-primary is-size-4 mr-2"><i class="fas fa-wallet"></i></span>
 			<span class="has-text-weight-bold is-size-5">Hachimoku</span>
 		</div>
+		<p class="menu-label">サマリー</p>
 		<ul class="menu-list">
 			<li><a hx-get="/accounts/all" hx-target="#main-content" hx-push-url="true"><i class="fas fa-wallet mr-2"></i>{ AccountsTitle }</a></li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/pnl/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-chart-line mr-2"></i>{ PNLTitle }</a></li>
 			<li><a hx-get={ templ.URL(fmt.Sprintf("/shop/%d/%02d", args.CurrentYear, args.CurrentMonth)) } hx-target="#main-content" hx-push-url="true"><i class="fas fa-store mr-2"></i>{ ShopTitle }</a></li>
+		</ul>
+		<p class="menu-label">
+			<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+		</p>
+		<p class="menu-label mt-5">現金</p>
+		<ul class="menu-list">
+			<li><a class={ templ.KV("is-active", args.Account == "1") } hx-get="/history/1" hx-target="#main-content" hx-push-url="true" hx-disable?={ args.Account == "1" }>財布</a></li>
+		</ul>
+		<p class="menu-label mt-5">銀行</p>
+		<ul class="menu-list">
+			<li><a class={ templ.KV("is-active", args.Account == "2") } hx-get="/history/2" hx-target="#main-content" hx-push-url="true" hx-disable?={ args.Account == "2" }>三菱UFJ銀行</a></li>
+		</ul>
+		<p class="menu-label mt-5">カード</p>
+		<ul class="menu-list">
 			<li>
-				<a hx-get="/history" hx-target="#main-content" hx-push-url="true" class={ "is-active" }>
-					<i class="fas fa-history mr-2"></i>{ HistoryTitle }
+				<a class={ templ.KV("is-active", args.Account == "3") } hx-get="/history/3" hx-target="#main-content" hx-push-url="true" hx-disable?={ args.Account == "3" }>
+					楽天カード
 					<span class="tag is-warning is-rounded is-light ml-2" style="height: 1.5em;">2</span>
 				</a>
 			</li>
+		</ul>
+		<p class="menu-label mt-5">食費</p>
+		<ul class="menu-list">
+			<li><a class={ templ.KV("is-active", args.Account == "10") } hx-get="/history/10" hx-target="#main-content" hx-push-url="true" hx-disable?={ args.Account == "10" }>食費</a></li>
 		</ul>
 	</aside>
 }
