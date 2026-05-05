@@ -1,4 +1,4 @@
-pub mod user;
+pub mod cabinet;
 pub mod book;
 pub mod category;
 pub mod account;
@@ -16,7 +16,7 @@ use std::sync::LazyLock;
 pub enum DomainError {
     #[error("system error")]
     System,
-    #[error("book slug already exists for this user")]
+    #[error("book slug already exists for this cabinet")]
     BookSlugExists,
     #[error("invalid book slug")]
     InvalidBookSlug,
@@ -32,9 +32,9 @@ pub enum DomainError {
     CategoryNotFound,
     #[error("単位が見つかりません")]
     UnitNotFound,
-    #[error("unit code already exists for this user")]
+    #[error("unit code already exists for this cabinet")]
     UnitCodeExists,
-    #[error("unit name already exists for this user")]
+    #[error("unit name already exists for this cabinet")]
     UnitNameExists,
     #[error("the specified unit is not owned by the book")]
     NotOwnedUnit,
@@ -56,8 +56,14 @@ pub enum DomainError {
 
 pub type Result<T> = std::result::Result<T, DomainError>;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CabinetType {
+    Owned,
+    Shared,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct UserId(pub Uuid);
+pub struct CabinetId(pub Uuid);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BookId(pub Uuid);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -138,14 +144,33 @@ impl FromStr for MajorCategory {
     }
 }
 
+static SLUG_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CabinetName(String);
+
+impl CabinetName {
+    pub fn new(name: String) -> Result<Self> {
+        if SLUG_PATTERN.is_match(&name) && name.len() >= 3 && name.len() <= 20 {
+            Ok(Self(name))
+        } else {
+            Err(DomainError::System) // Or a more specific error if available
+        }
+    }
+}
+
+impl fmt::Display for CabinetName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BookSlug(String);
 
-static BOOKSLUG_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
-
 impl BookSlug {
     pub fn new(slug: String) -> Result<Self> {
-        if BOOKSLUG_PATTERN.is_match(&slug) && slug.len() > 2 && slug.len() <= 20 {
+        if SLUG_PATTERN.is_match(&slug) && slug.len() > 2 && slug.len() <= 20 {
             Ok(Self(slug))
         } else {
             Err(DomainError::InvalidBookSlug)
