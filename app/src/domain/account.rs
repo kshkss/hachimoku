@@ -1,6 +1,6 @@
-use crate::domain::{AccountId, CategoryId, UnitId, BookId, Result, DomainError, Entity, Relation};
 use crate::domain::book::Book;
 use crate::domain::category::Category;
+use crate::domain::{AccountId, BookId, CategoryId, DomainError, Entity, Relation, Result, UnitId};
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -33,18 +33,33 @@ impl Account {
         unit: UnitId,
         book: BookId,
     ) -> Result<Self> {
-        Ok(Self { id, name, category, unit, book })
+        Ok(Self {
+            id,
+            name,
+            category,
+            unit,
+            book,
+        })
     }
-    
-    pub fn unit(&self) -> UnitId { self.unit }
-    pub fn category(&self) -> &Relation<CategoryId, Category> { &self.category }
+
+    pub fn unit(&self) -> UnitId {
+        self.unit
+    }
+    pub fn category(&self) -> &Relation<CategoryId, Category> {
+        &self.category
+    }
 }
 
 impl Book {
     /// 帳簿が所有する新しい Account を作成します。
-    pub fn create_account(&self, name: String, category_id: CategoryId, unit_id: UnitId) -> Result<Account> {
+    pub fn create_account(
+        &self,
+        name: String,
+        category_id: CategoryId,
+        unit_id: UnitId,
+    ) -> Result<Account> {
         if name.is_empty() || category_id.as_str().is_empty() || unit_id.as_uuid().is_nil() {
-             return Err(DomainError::System);
+            return Err(DomainError::System);
         }
         use crate::domain::Entity;
         Ok(Account {

@@ -1,4 +1,4 @@
-use crate::domain::{CabinetId, CabinetName, CabinetType, Result, DomainError, Entity};
+use crate::domain::{CabinetId, CabinetName, CabinetType, DomainError, Entity, Result};
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -23,9 +23,9 @@ impl Cabinet {
         if id.as_uuid().is_nil() {
             return Err(DomainError::System);
         }
-        Ok(Self { 
-            id, 
-            name, 
+        Ok(Self {
+            id,
+            name,
             cabinet_type: CabinetType::Shared,
         })
     }
@@ -40,8 +40,16 @@ impl Cabinet {
     }
 
     /// インフラ層などで既存のデータから Cabinet を復元します。
-    pub fn reconstruct(id: CabinetId, name: CabinetName, cabinet_type: CabinetType) -> Result<Self> {
-        Ok(Self { id, name, cabinet_type })
+    pub fn reconstruct(
+        id: CabinetId,
+        name: CabinetName,
+        cabinet_type: CabinetType,
+    ) -> Result<Self> {
+        Ok(Self {
+            id,
+            name,
+            cabinet_type,
+        })
     }
 }
 

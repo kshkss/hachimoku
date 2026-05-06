@@ -1,5 +1,7 @@
-use crate::domain::{BookId, BookSlug, CabinetId, CabinetName, CabinetType, UnitId, Result, DomainError, Entity};
 use crate::domain::cabinet::Cabinet;
+use crate::domain::{
+    BookId, BookSlug, CabinetId, CabinetName, CabinetType, DomainError, Entity, Result, UnitId,
+};
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -25,8 +27,20 @@ impl Entity for Book {
 
 impl Book {
     /// インフラ層などで既存のデータから Book を復元します。
-    pub fn reconstruct(id: BookId, slug: BookSlug, base_unit: UnitId, name: String, cabinet: CabinetId) -> Result<Self> {
-        Ok(Self { id, slug, base_unit, name, cabinet })
+    pub fn reconstruct(
+        id: BookId,
+        slug: BookSlug,
+        base_unit: UnitId,
+        name: String,
+        cabinet: CabinetId,
+    ) -> Result<Self> {
+        Ok(Self {
+            id,
+            slug,
+            base_unit,
+            name,
+            cabinet,
+        })
     }
 }
 
@@ -38,7 +52,7 @@ impl Cabinet {
             return Err(DomainError::PermissionDenied);
         }
         if name.is_empty() || base_unit.as_uuid().is_nil() {
-             return Err(DomainError::System);
+            return Err(DomainError::System);
         }
 
         Ok(Book {

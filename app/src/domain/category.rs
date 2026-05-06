@@ -1,4 +1,4 @@
-use crate::domain::{CategoryId, MajorCategory, Result, Entity};
+use crate::domain::{CategoryId, Entity, MajorCategory, Result};
 use async_trait::async_trait;
 
 /// Category は勘定科目のカテゴリーを表すドメインエンティティです。
@@ -20,8 +20,18 @@ impl Entity for Category {
 
 impl Category {
     /// インフラ層などで既存のデータから Category を復元します。
-    pub fn reconstruct(id: CategoryId, major: MajorCategory, minor: String, is_active: bool) -> Result<Self> {
-        Ok(Self { id, major, minor, is_active })
+    pub fn reconstruct(
+        id: CategoryId,
+        major: MajorCategory,
+        minor: String,
+        is_active: bool,
+    ) -> Result<Self> {
+        Ok(Self {
+            id,
+            major,
+            minor,
+            is_active,
+        })
     }
 
     pub fn major(&self) -> MajorCategory {
