@@ -5,8 +5,8 @@ use uuid::Uuid;
 /// Cabinet は帳簿（Book）の集まりを管理するエンティティです。
 #[derive(Debug)]
 pub struct Cabinet {
-    pub(super) id: CabinetId,
-    pub(super) name: CabinetName,
+    id: CabinetId,
+    name: CabinetName,
     pub(super) cabinet_type: CabinetType,
 }
 

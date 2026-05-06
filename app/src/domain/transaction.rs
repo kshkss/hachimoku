@@ -13,8 +13,8 @@ use uuid::{NoContext, Timestamp, Uuid};
 /// Journal は帳簿内の取引（Transaction）の集合を管理する集約ルートです。
 #[derive(Debug)]
 pub struct Journal {
-    pub(super) transactions: Vec<Transaction>,
-    pub(super) book: BookId,
+    transactions: Vec<Transaction>,
+    book: BookId,
 }
 
 /// TransactionParam は取引を分割する際などに使用されるパラメータです。
@@ -28,28 +28,28 @@ pub struct TransactionParam {
 /// Transaction は一回分の会計取引を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Transaction {
-    pub(super) id: TransactionId,
-    pub(super) date: DateTime<Utc>,
-    pub(super) note: String,
-    pub(super) entries: Vec<Entry>,
-    pub(super) book: BookId,
-    pub(super) is_deleted: bool,
+    id: TransactionId,
+    date: DateTime<Utc>,
+    note: String,
+    entries: Vec<Entry>,
+    book: BookId,
+    is_deleted: bool,
 }
 
 /// Entry は取引を構成する各勘定科目への記帳（エントリー）を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Entry {
-    pub(super) id: EntryId,
+    id: EntryId,
     /// Date は Entry が保護されるときにセットされます。保護されていない場合は None です。
-    pub(super) date: Option<DateTime<Utc>>,
-    pub(super) note: String,
-    pub(super) amount: Amount,
+    date: Option<DateTime<Utc>>,
+    note: String,
+    amount: Amount,
     /// Unit は記帳に使用される単位です。
-    pub(super) unit: Relation<UnitId, Unit>,
+    unit: Relation<UnitId, Unit>,
     /// Account は記帳対象の勘定科目です。
-    pub(super) account: Relation<AccountId, Account>,
-    pub(super) is_protected: bool,
-    pub(super) provider_id: Option<String>,
+    account: Relation<AccountId, Account>,
+    is_protected: bool,
+    provider_id: Option<String>,
 }
 
 fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
@@ -655,7 +655,7 @@ pub trait TransactionRepository: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{BookSlug, Cabinet, CabinetId, CabinetName, Category, CategoryId, UnitId};
+    use crate::domain::{BookSlug, Cabinet, CabinetName, Category, CategoryId, UnitId};
     use uuid::Uuid;
 
     fn setup_book() -> (Book, UnitId) {

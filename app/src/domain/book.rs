@@ -1,6 +1,6 @@
 use crate::domain::cabinet::Cabinet;
 use crate::domain::{
-    BookId, BookSlug, CabinetId, CabinetName, CabinetType, DomainError, Entity, Result, UnitId,
+    BookId, BookSlug, CabinetId, CabinetType, DomainError, Entity, Result, UnitId,
 };
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -8,14 +8,14 @@ use uuid::Uuid;
 /// Book は一冊の帳簿を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Book {
-    pub(super) id: BookId,
+    id: BookId,
     /// Slug はキャビネット内で一意な文字列で、BookをURLなどで識別するために使用されます。
-    pub(super) slug: BookSlug,
+    slug: BookSlug,
     /// BaseUnit は帳簿の基本単位です。
-    pub(super) base_unit: UnitId,
-    pub(super) name: String,
+    base_unit: UnitId,
+    name: String,
     /// Cabinet はこの帳簿が所属するキャビネットの ID です。
-    pub(super) cabinet: CabinetId,
+    cabinet: CabinetId,
 }
 
 impl Entity for Book {
@@ -75,6 +75,7 @@ pub trait BookRepository: Send + Sync {
 
 #[cfg(test)]
 mod tests {
+    use super::super::CabinetName;
     use super::*;
     use uuid::Uuid;
 

@@ -7,14 +7,14 @@ use uuid::Uuid;
 /// Account は勘定科目を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Account {
-    pub(super) id: AccountId,
-    pub(super) name: String,
+    id: AccountId,
+    name: String,
     /// Category はこの科目が属するカテゴリーです。
-    pub(super) category: Relation<CategoryId, Category>,
+    category: Relation<CategoryId, Category>,
     /// Unit はこの科目の基本単位です。
-    pub(super) unit: UnitId,
+    unit: UnitId,
     /// Book はこの科目を所有する帳簿の ID です。
-    pub(super) book: BookId,
+    book: BookId,
 }
 
 impl Entity for Account {

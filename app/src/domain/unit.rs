@@ -6,15 +6,15 @@ use uuid::Uuid;
 /// Unit は取引で使用される単位（通貨など）を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Unit {
-    pub(super) id: UnitId,
+    id: UnitId,
     /// Code は単位を識別するコードで、帳簿内で一意である必要があります。
-    pub(super) code: String,
-    pub(super) symbol: String,
+    code: String,
+    symbol: String,
     /// Name は単位の名称で、帳簿内で一意である必要があります。
-    pub(super) name: String,
-    pub(super) precision: u8,
+    name: String,
+    precision: u8,
     /// Book はこの単位を所有する帳簿の ID です。
-    pub(super) book: BookId,
+    book: BookId,
 }
 
 impl Entity for Unit {
