@@ -10,12 +10,14 @@ use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 use uuid::{NoContext, Timestamp, Uuid};
 
+/// Journal は帳簿内の取引（Transaction）の集合を管理する集約ルートです。
 #[derive(Debug)]
 pub struct Journal {
     pub(super) transactions: Vec<Transaction>,
     pub(super) book: BookId,
 }
 
+/// TransactionParam は取引を分割する際などに使用されるパラメータです。
 #[derive(Debug)]
 pub struct TransactionParam {
     pub date: DateTime<Utc>,
@@ -23,6 +25,7 @@ pub struct TransactionParam {
     pub entries: Vec<EntryId>,
 }
 
+/// Transaction は一回分の会計取引を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Transaction {
     pub(super) id: TransactionId,
@@ -33,13 +36,17 @@ pub struct Transaction {
     pub(super) is_deleted: bool,
 }
 
+/// Entry は取引を構成する各勘定科目への記帳（エントリー）を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Entry {
     pub(super) id: EntryId,
+    /// Date は Entry が保護されるときにセットされます。保護されていない場合は None です。
     pub(super) date: Option<DateTime<Utc>>,
     pub(super) note: String,
     pub(super) amount: Amount,
+    /// Unit は記帳に使用される単位です。
     pub(super) unit: Relation<UnitId, Unit>,
+    /// Account は記帳対象の勘定科目です。
     pub(super) account: Relation<AccountId, Account>,
     pub(super) is_protected: bool,
     pub(super) provider_id: Option<String>,
@@ -62,6 +69,19 @@ impl Entity for Entry {
 }
 
 impl Entry {
+    /// `Account.create_entry()` で作成した Entry を保護するメソッドです。
+    ///
+    /// # 正常終了時
+    /// 保護済み状態となった自身の所有権（`Ok(Self)`）を返します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidEntry` を返します。
+    /// - すでに保護されている場合。
+    /// - `note` が空の場合。
+    /// - `provider_id` が空の場合。
+    ///
+    /// # 注意
+    /// Journal 内の Entry に対して直接呼び出してはいけません。
     pub fn mark_protected(
         self,
         date: DateTime<Utc>,
@@ -81,6 +101,7 @@ impl Entry {
         }
     }
 
+    /// インフラ層などで既存のデータから Entry を復元します。
     pub fn reconstruct(
         id: EntryId,
         date: Option<DateTime<Utc>>,
@@ -103,6 +124,7 @@ impl Entry {
         })
     }
 
+    /// 指定された日付が、エントリーの日付（セットされている場合）と一致するかどうかを返します。
     pub fn is_date_match(&self, date: DateTime<Utc>) -> bool {
         match self.date {
             Some(d) => d == date,
@@ -131,7 +153,7 @@ impl Entity for Transaction {
 }
 
 impl Transaction {
-
+    /// インフラ層などで既存のデータから Transaction を復元します。
     pub fn reconstruct(
         id: TransactionId,
         date: DateTime<Utc>,
@@ -150,6 +172,19 @@ impl Transaction {
         })
     }
 
+    /// 取引の内容が妥当性を検証します。
+    ///
+    /// # 正常終了時
+    /// 内容が妥当であることを示す `Ok(())` を返します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - エントリーが2つ未満の場合。
+    /// - エントリーの日付と取引の日付が一貫していない場合。
+    /// - 借方と貸方の合計（貸借）が一致していない場合。
+    ///
+    /// 以下の場合は `DomainError::InvalidEntry` を返します。
+    /// - エントリーの金額がゼロの場合。
     pub fn validate(&self) -> Result<()> {
         if self.entries.len() < 2 {
             return Err(DomainError::InvalidTransactionOperation);
@@ -184,6 +219,7 @@ impl Transaction {
         self.is_deleted
     }
 
+    /// 取引内に保護されたエントリーが含まれているかどうかを返します。
     pub fn has_protected_entries(&self) -> bool {
         self.entries.iter().any(|e| e.is_protected())
     }
@@ -200,6 +236,7 @@ impl Transaction {
         self.entries.remove(index)
     }
 
+    /// 他の取引からすべてのエントリーをこの取引に移動させます。
     pub fn append(&mut self, other: &mut Transaction) {
         self.entries.append(&mut other.entries);
     }
@@ -218,10 +255,26 @@ impl Transaction {
 }
 
 impl Journal {
+    /// インフラ層などで既存のデータから Journal を復元します。
+    /// 復元時に、各取引の所属帳簿 ID が一致しているか、および各取引が独立して妥当（`Transaction::validate`）かを検証します。
     pub fn reconstruct(transactions: Vec<Transaction>, book: BookId) -> Result<Self> {
         Ok(Self { transactions, book })
     }
 
+    /// `UpdateTransactions` を呼び出す前に、不変条件を満たすか検査する関数です。
+    ///
+    /// # 正常終了時
+    /// 不変条件が満たされていることを示す `Ok(())` を返します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - 取引の所属帳簿 ID が Journal の帳簿 ID と一致しない場合。
+    /// - 削除される取引（`is_deleted` が true）に保護されたエントリーが含まれている場合。
+    /// - 削除されない取引において：
+    ///   - 取引にエントリーが含まれていない、または1つしか含まれていない場合。
+    ///   - 貸借の合計が一致していない場合。
+    ///   - 取引とそれに含まれるエントリーの日付が一貫していない場合。
+    ///   - 金額がゼロのエントリーが含まれている場合。
     pub fn validate(&self) -> Result<()> {
         for tx in &self.transactions {
             if tx.book != self.book {
@@ -238,6 +291,16 @@ impl Journal {
         Ok(())
     }
 
+    /// 新しい取引を作成して Journal に追加します。
+    ///
+    /// # 正常終了時
+    /// 生成された新しい取引の ID（`Ok(TransactionId)`）を返します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - `note` が空の場合。
+    /// - `date` がゼロ（未指定）の場合。
+    /// - 貸借が一致しない、または日付に整合性がない場合（`Transaction::validate` に準ずる）。
     pub fn create_transaction(
         &mut self,
         date: DateTime<Utc>,
@@ -261,6 +324,20 @@ impl Journal {
         Ok(id)
     }
 
+    /// 取引の日付と説明を更新します。
+    ///
+    /// # 正常終了時
+    /// 生成された新しい取引の ID（`Ok(TransactionId)`）を返します。
+    ///
+    /// # 挙動
+    /// 元の取引は削除済み（`is_deleted` = true）となり、エントリーはすべて新しい取引へ移動します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - 取引 ID が見つからない場合。
+    /// - 指定された取引がすでに削除済みの場合。
+    /// - `note` が空、または `date` がゼロの場合。
+    /// - 更新後の日付が既存エントリーの日付と矛盾する場合。
     pub fn update(
         &mut self,
         txid: TransactionId,
@@ -296,6 +373,22 @@ impl Journal {
         Ok(id)
     }
 
+    /// 複数の取引を一つにマージします。
+    ///
+    /// # 正常終了時
+    /// マージによって生成された新しい取引の ID（`Ok(TransactionId)`）を返します。
+    ///
+    /// # 挙動
+    /// マージ後は元のすべての取引が削除済み（`is_deleted` = true）となり、全エントリーが新しい取引へ移動します。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - 指定された取引が2つ未満の場合。
+    /// - `note` が空、または `date` がゼロの場合。
+    /// - 取引 ID が見つからない、または既に削除済みの場合。
+    /// - 同じ取引 ID が重複して指定されている場合。
+    /// - マージ後の日付と全エントリーの日付が一貫していない場合。
+    /// - 統合後のエントリーの貸借が一致しない場合。
     pub fn merge(
         &mut self,
         date: DateTime<Utc>,
@@ -343,6 +436,22 @@ impl Journal {
         Ok(id)
     }
 
+    /// 取引を複数の取引に分割します。
+    ///
+    /// # 正常終了時
+    /// 分割によって生成された新しい取引の ID リスト（`Ok(Vec<TransactionId>)`）を返します。
+    ///
+    /// # 挙動
+    /// 分割後、元の取引は削除済み（`is_deleted` = true）となります。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - 分割先パラメータ（`params`）が2つ未満の場合。
+    /// - `note` が空、または `date` がゼロのパラメータが含まれる場合。
+    /// - ソースとなる取引が見つからない、または既に削除済みの場合。
+    /// - 分割先全体でエントリーが重複して指定されている場合。
+    /// - 分割後の各取引において、日付矛盾または貸借不一致が発生する場合。
+    /// - ソース取引のすべてのエントリーが、分割先のいずれにも含まれていない（未消化）場合。
     pub fn divide(
         &mut self,
         source: TransactionId,
@@ -400,6 +509,23 @@ impl Journal {
         Ok(result_ids)
     }
 
+    /// 取引に含まれるエントリーを更新（追加・削除・再利用）します。
+    ///
+    /// # 正常終了時
+    /// 更新された内容を持つ新しい取引の ID（`Ok(TransactionId)`）を返します。
+    ///
+    /// # 挙動
+    /// 元の取引は削除済み（`is_deleted` = true）となります。
+    /// `reuse` に含まれない（再利用されない）エントリーは、元の取引に残され、最終的にソース取引と共に削除されます。
+    /// `created` （新規作成されたエントリー）は新しい取引に追加されます。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidTransactionOperation` を返します。
+    /// - ソースとなる取引が見つからない、または既に削除済みの場合。
+    /// - 再利用されない（削除予定の）エントリーの中に、保護された（`is_protected`）エントリーが含まれている場合。
+    /// - 再利用指定されたエントリー ID がソース取引に含まれていない場合。
+    /// - 新規作成されたエントリーの日付が、取引の日付と一貫していない場合。
+    /// - 最終的な新しい取引において、貸借が一致しない、またはエントリー数が不足している場合。
     pub fn update_entries(
         &mut self,
         source: TransactionId,
@@ -455,6 +581,18 @@ impl Journal {
 }
 
 impl Account {
+    /// 新しい Entry を作成します。
+    ///
+    /// # 正常終了時
+    /// 作成された `Entry` の所有権を返します。
+    ///
+    /// # 注意
+    /// 取引に追加するには別途 `Journal::create_transaction` や `Journal::update_entries` を呼び出す必要があります。
+    ///
+    /// # エラー
+    /// 以下の場合は `DomainError::InvalidEntry` を返します。
+    /// - 金額が 0 の場合。
+    /// - 金額の単位が科目の基本単位と異なり、かつ科目の大分類が「純資産」以外の場合。
     pub fn create_entry(&self, date: DateTime<Utc>, note: String, amount: Amount) -> Result<Entry> {
         let (major, account_id) = {
             let cat = match self.category() {
@@ -487,6 +625,7 @@ impl Account {
 }
 
 impl Book {
+    /// この帳簿に関連付けられた空の Journal を作成します。
     pub fn create_journal(&self) -> Journal {
         use crate::domain::Entity;
         Journal {
@@ -498,6 +637,8 @@ impl Book {
 
 #[async_trait]
 pub trait TransactionRepository: Send + Sync {
+    /// 指定された複数の TransactionId に対応する取引を取得し、Journal として返します。
     async fn get_transactions(&self, transaction_ids: &[TransactionId]) -> Result<Journal>;
+    /// 取引とエントリーを追加・削除・更新します。
     async fn update_transactions(&self, journal: &Journal) -> Result<()>;
 }

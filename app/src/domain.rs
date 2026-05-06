@@ -56,9 +56,12 @@ pub enum DomainError {
 
 pub type Result<T> = std::result::Result<T, DomainError>;
 
+/// CabinetType はキャビネットの種類を表します。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CabinetType {
+    /// 自身が所有するキャビネット
     Owned,
+    /// 他者から共有されたキャビネット
     Shared,
 }
 
@@ -139,17 +142,21 @@ impl EntryId {
     }
 }
 
+/// Relation は、IDのみを持つ（未読み込み）か、エンティティ全体を持つ（読み込み済み）かの状態を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Relation<I, T> {
+    /// IDのみを保持する未読み込み状態
     Unloaded(I),
+    /// エンティティの実体を保持する読み込み済み状態
     Loaded(T),
 }
 
 impl<I, T> Relation<I, T> {
-    pub fn id(&self) -> I 
-    where 
+    /// 保持している ID を返します。Loaded の場合はエンティティから ID を取得します。
+    pub fn id(&self) -> I
+    where
         I: Clone,
-        T: Entity<Id = I>
+        T: Entity<Id = I>,
     {
         match self {
             Relation::Unloaded(id) => id.clone(),
@@ -157,6 +164,7 @@ impl<I, T> Relation<I, T> {
         }
     }
 
+    /// Loaded 状態の場合にのみ、エンティティへの参照を返します。
     pub fn entity(&self) -> Option<&T> {
         match self {
             Relation::Unloaded(_) => None,
@@ -165,20 +173,29 @@ impl<I, T> Relation<I, T> {
     }
 }
 
+/// Entity は、識別子（ID）を持つドメインエンティティを表すトレイトです。
 pub trait Entity {
     type Id: PartialEq;
+    /// エンティティの ID を返します。
     fn id(&self) -> Self::Id;
+    /// 指定された ID がこのエンティティの ID と一致するかどうかを判定します。
     fn has_id(&self, id: Self::Id) -> bool {
         self.id() == id
     }
 }
 
+/// MajorCategory は勘定科目の大分類を表します。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MajorCategory {
+    /// 資産
     Asset,
+    /// 負債
     Liability,
+    /// 純資産（資本）
     Equity,
+    /// 収益
     Income,
+    /// 費用
     Expense,
 }
 
@@ -212,6 +229,8 @@ impl FromStr for MajorCategory {
 static SLUG_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
 
+/// CabinetName はキャビネットの名称を表す値オブジェクトです。
+/// 3文字以上20文字以下の英数字とハイフンのみを許容します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CabinetName(String);
 
@@ -235,6 +254,8 @@ impl fmt::Display for CabinetName {
     }
 }
 
+/// BookSlug は帳簿を識別するためのユーザーごとに一意なスラッグです。
+/// 3文字以上20字以下の英数字とハイフンのみを許容します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BookSlug(String);
 
@@ -258,6 +279,7 @@ impl fmt::Display for BookSlug {
     }
 }
 
+/// Amount は取引の金額と単位を保持する値オブジェクトです。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Amount {
     value: i32,
@@ -265,6 +287,8 @@ pub struct Amount {
 }
 
 impl Amount {
+    /// 新しい Amount を作成します。金額が0の場合はエラーを返します。
+    // FIXME: コンストラクタをdebit(u32)とcredit(u32)に分割。値の上限をi32::MAXに制限。
     pub fn new(value: i32, unit: UnitId) -> Result<Self> {
         if value == 0 {
             return Err(DomainError::InvalidEntry);
@@ -272,6 +296,7 @@ impl Amount {
         Ok(Self { value, unit })
     }
 
+    /// インフラ層などで既存のデータから Amount を復元します。
     pub fn reconstruct(debit: u32, credit: u32, unit: UnitId) -> Result<Self> {
         const MAXINT: u32 = i32::MAX as u32;
         if debit > MAXINT || credit > MAXINT {
@@ -282,18 +307,22 @@ impl Amount {
         }
     }
 
+    /// 単位の ID を返します。
     pub fn unit(&self) -> UnitId {
         self.unit
     }
 
+    /// 借方の金額（正の値）を返します。
     pub fn debit(&self) -> u32 {
         self.value.max(0) as u32
     }
 
+    /// 貸方の金額（正の値）を返します。
     pub fn credit(&self) -> u32 {
         (-self.value).max(0) as u32
     }
 
+    /// 金額の符号を反転させた Amount を返します。
     pub fn neg(&self) -> Self {
         Self {
             value: -self.value,
@@ -301,10 +330,12 @@ impl Amount {
         }
     }
 
+    /// 金額がバランスしている（0である）かどうかを返します。
     pub fn is_balanced(&self) -> bool {
         self.value == 0
     }
 
+    /// 金額がバランスしている（0である）かどうかを返します。
     pub fn is_zero(&self) -> bool {
         self.value == 0
     }
@@ -324,4 +355,5 @@ impl std::ops::Add for Amount {
     }
 }
 
+/// 未分類のカテゴリー ID 定数です。
 pub const CATEGORY_UNCLASSIFIED: &str = "eq_unclassified";
