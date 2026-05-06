@@ -7,39 +7,39 @@ use chrono::{DateTime, Utc};
 use uuid::{Uuid, Timestamp, NoContext};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Journal {
-    pub transactions: Vec<Transaction>,
-    pub book: BookId,
+    transactions: Vec<Transaction>,
+    book: BookId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TransactionParam {
     pub date: DateTime<Utc>,
     pub note: String,
     pub entries: Vec<EntryId>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Transaction {
-    pub id: TransactionId,
-    pub date: DateTime<Utc>,
-    pub note: String,
-    pub entries: Vec<Entry>,
-    pub book: BookId,
-    pub is_deleted: bool,
+    id: TransactionId,
+    date: DateTime<Utc>,
+    note: String,
+    entries: Vec<Entry>,
+    book: BookId,
+    is_deleted: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Entry {
-    pub id: EntryId,
-    pub date: Option<DateTime<Utc>>,
-    pub note: String,
-    pub amount: Amount,
-    pub unit: Relation<UnitId, Unit>,
-    pub account: Relation<AccountId, Account>,
-    pub is_protected: bool,
-    pub provider_id: Option<String>,
+    id: EntryId,
+    date: Option<DateTime<Utc>>,
+    note: String,
+    amount: Amount,
+    unit: Relation<UnitId, Unit>,
+    account: Relation<AccountId, Account>,
+    is_protected: bool,
+    provider_id: Option<String>,
 }
 
 fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
@@ -51,56 +51,41 @@ fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
     Uuid::new_v7(ts)
 }
 
-impl Transaction {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() || self.note.is_empty() || self.book.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        for e in &self.entries {
-            e.validate()?;
-        }
-        Ok(())
-    }
-}
-
 impl Entry {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        self.amount.validate()?;
-        
-        // Unit validation
-        match &self.unit {
-            Relation::Unloaded(id) => {
-                if *id != self.amount.unit {
-                    return Err(DomainError::System);
-                }
-            }
-            Relation::Loaded(u) => {
-                u.validate()?;
-                if u.id != self.amount.unit {
-                    return Err(DomainError::System);
-                }
-            }
-        }
+    pub fn has_id(&self, id: EntryId) -> bool {
+        self.id == id
+    }
 
-        // Account validation
-        match &self.account {
-            Relation::Unloaded(id) => {
-                if id.0.is_nil() {
-                    return Err(DomainError::System);
-                }
-            }
-            Relation::Loaded(a) => {
-                a.validate()?;
-            }
-        }
+    pub fn reconstruct(
+        id: EntryId,
+        date: Option<DateTime<Utc>>,
+        note: String,
+        amount: Amount,
+        unit: Relation<UnitId, Unit>,
+        account: Relation<AccountId, Account>,
+        is_protected: bool,
+        provider_id: Option<String>,
+    ) -> Self {
+        Self { id, date, note, amount, unit, account, is_protected, provider_id }
+    }
 
-        if self.is_protected && (self.date.is_none() || self.note.is_empty() || self.provider_id.is_none() || self.provider_id.as_ref().unwrap().is_empty()) {
-            return Err(DomainError::System);
+    pub fn is_date_match(&self, date: DateTime<Utc>) -> bool {
+        match self.date {
+            Some(d) => d == date,
+            None => true,
         }
-        Ok(())
+    }
+
+    pub fn is_protected(&self) -> bool {
+        self.is_protected
+    }
+
+    pub fn amount(&self) -> Amount {
+        self.amount
+    }
+
+    pub fn unit(&self) -> UnitId {
+        self.amount.unit()
     }
 
     pub fn mark_protected(&mut self, date: DateTime<Utc>, note: String, provider_id: String) -> Result<()> {
@@ -118,70 +103,105 @@ impl Entry {
     }
 }
 
-fn validate_date(date: DateTime<Utc>, entries: &[Entry]) -> Result<()> {
-    for e in entries {
-        if let Some(e_date) = e.date {
-            if e_date != date {
+impl Transaction {
+    pub fn has_id(&self, id: TransactionId) -> bool {
+        self.id == id
+    }
+
+    pub fn reconstruct(
+        id: TransactionId,
+        date: DateTime<Utc>,
+        note: String,
+        entries: Vec<Entry>,
+        book: BookId,
+        is_deleted: bool,
+    ) -> Self {
+        Self { id, date, note, entries, book, is_deleted }
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        if self.entries.len() < 2 {
+            return Err(DomainError::InvalidTransactionOperation);
+        }
+        let mut sum: HashMap<UnitId, Amount> = HashMap::new();
+        for e in &self.entries {
+            if !e.is_date_match(self.date) {
+                return Err(DomainError::InvalidTransactionOperation);
+            }
+            let amount = e.amount();
+            if amount.is_zero() {
+                return Err(DomainError::InvalidTransactionOperation);
+            }
+            match sum.get_mut(&amount.unit()) {
+                Some(existing) => {
+                    *existing = *existing + amount;
+                }
+                None => {
+                    sum.insert(amount.unit(), amount);
+                }
+            }
+        }
+        for amount in sum.values() {
+            if !amount.is_balanced() {
                 return Err(DomainError::InvalidTransactionOperation);
             }
         }
+        Ok(())
     }
-    Ok(())
-}
 
-fn validate_balance(entries: &[Entry]) -> Result<()> {
-    if entries.len() < 2 {
-        return Err(DomainError::InvalidTransactionOperation);
+    pub fn is_deleted(&self) -> bool {
+        self.is_deleted
     }
-    let mut sum: HashMap<UnitId, Amount> = HashMap::new();
-    for e in entries {
-        if e.amount.is_zero() {
-            return Err(DomainError::InvalidTransactionOperation);
-        }
-        match sum.get_mut(&e.amount.unit) {
-            Some(existing) => {
-                *existing = (*existing + e.amount)?;
-            }
-            None => {
-                sum.insert(e.amount.unit, e.amount);
-            }
-        }
+
+    pub fn has_protected_entries(&self) -> bool {
+        self.entries.iter().any(|e| e.is_protected())
     }
-    for amount in sum.values() {
-        if !amount.is_balance() {
-            return Err(DomainError::InvalidTransactionOperation);
-        }
+
+    pub fn push_entry(&mut self, entry: Entry) {
+        self.entries.push(entry);
     }
-    Ok(())
+
+    pub fn pop_entry(&mut self) -> Option<Entry> {
+        self.entries.pop()
+    }
+
+    pub fn remove(&mut self, index: usize) -> Entry {
+        self.entries.remove(index)
+    }
+
+    pub fn append(&mut self, other: &mut Transaction) {
+        self.entries.append(&mut other.entries);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, Entry> {
+        self.entries.iter()
+    }
 }
 
 impl Journal {
+    pub fn reconstruct(transactions: Vec<Transaction>, book: BookId) -> Self {
+        Self { transactions, book }
+    }
+
     pub fn validate(&self) -> Result<()> {
-        let mut used_entry_ids = HashMap::new();
         for tx in &self.transactions {
-            tx.validate()?;
             if tx.book != self.book {
                 return Err(DomainError::InvalidTransactionOperation);
             }
-            if tx.is_deleted {
-                for e in &tx.entries {
-                    e.validate()?;
-                    if e.is_protected {
-                        return Err(DomainError::InvalidTransactionOperation);
-                    }
-                    if used_entry_ids.insert(e.id, true).is_some() {
-                        return Err(DomainError::InvalidTransactionOperation);
-                    }
+            if tx.is_deleted() {
+                if tx.has_protected_entries() {
+                    return Err(DomainError::InvalidTransactionOperation);
                 }
             } else {
-                for e in &tx.entries {
-                    e.validate()?;
-                    if used_entry_ids.insert(e.id, true).is_some() {
-                        return Err(DomainError::InvalidTransactionOperation);
-                    }
-                }
-                validate_date(tx.date, &tx.entries)?;
-                validate_balance(&tx.entries)?;
+                tx.validate()?;
             }
         }
         Ok(())
@@ -191,13 +211,7 @@ impl Journal {
         if note.is_empty() {
             return Err(DomainError::InvalidTransactionOperation);
         }
-        for e in &entries {
-            e.validate()?;
-        }
-        validate_date(date, &entries)?;
-        validate_balance(&entries)?;
-
-        let id = TransactionId(generate_id_from_date(date));
+        let id = TransactionId::new(generate_id_from_date(date));
         let tx = Transaction {
             id,
             date,
@@ -206,36 +220,32 @@ impl Journal {
             book: self.book,
             is_deleted: false,
         };
+        tx.validate()?;
         self.transactions.push(tx);
         Ok(id)
     }
 
     pub fn update(&mut self, txid: TransactionId, date: DateTime<Utc>, note: String) -> Result<TransactionId> {
-        let idx = self.transactions.iter().position(|t| t.id == txid).ok_or(DomainError::InvalidTransactionOperation)?;
+        let idx = self.transactions.iter().position(|t| t.has_id(txid)).ok_or(DomainError::InvalidTransactionOperation)?;
         
-        {
-            let tx = &self.transactions[idx];
-            if tx.is_deleted || note.is_empty() {
-                return Err(DomainError::InvalidTransactionOperation);
-            }
-            validate_date(date, &tx.entries)?;
+        if self.transactions[idx].is_deleted() || note.is_empty() {
+            return Err(DomainError::InvalidTransactionOperation);
         }
 
-        let entries = self.transactions[idx].entries.clone();
-        let book = self.transactions[idx].book;
-
-        let id = TransactionId(generate_id_from_date(date));
-        let new_tx = Transaction {
+        let mut old_tx = &mut self.transactions[idx];
+        let id = TransactionId::new(generate_id_from_date(date));
+        let mut new_tx = Transaction {
             id,
             date,
             note,
-            entries,
-            book,
+            entries: Vec::new(),
+            book: old_tx.book,
             is_deleted: false,
         };
+        new_tx.append(&mut old_tx);
+        new_tx.validate()?;
         
-        self.transactions[idx].is_deleted = true;
-        self.transactions[idx].entries = Vec::new();
+        old_tx.is_deleted = true;
         self.transactions.push(new_tx);
         
         Ok(id)
@@ -246,39 +256,36 @@ impl Journal {
             return Err(DomainError::InvalidTransactionOperation);
         }
 
-        let mut entries = Vec::new();
         let mut indices = Vec::new();
-
         for tid in &transaction_ids {
-            let idx = self.transactions.iter().position(|t| t.id == *tid).ok_or(DomainError::InvalidTransactionOperation)?;
-            if self.transactions[idx].is_deleted {
+            let idx = self.transactions.iter().position(|t| t.has_id(*tid)).ok_or(DomainError::InvalidTransactionOperation)?;
+            if self.transactions[idx].is_deleted() {
+                return Err(DomainError::InvalidTransactionOperation);
+            }
+            if indices.contains(&idx) {
                 return Err(DomainError::InvalidTransactionOperation);
             }
             indices.push(idx);
         }
 
-        for &idx in &indices {
-            entries.extend(self.transactions[idx].entries.clone());
-        }
-
-        validate_date(date, &entries)?;
-        validate_balance(&entries)?;
-
-        for &idx in &indices {
-            self.transactions[idx].is_deleted = true;
-            self.transactions[idx].entries = Vec::new();
-        }
-
-        let id = TransactionId(generate_id_from_date(date));
-        let tx = Transaction {
+        let id = TransactionId::new(generate_id_from_date(date));
+        let mut new_tx = Transaction {
             id,
             date,
             note,
-            entries,
+            entries: Vec::new(),
             book: self.book,
             is_deleted: false,
         };
-        self.transactions.push(tx);
+
+        for &idx in &indices {
+            let mut old_tx = &mut self.transactions[idx];
+            new_tx.append(&mut old_tx);
+            old_tx.is_deleted = true;
+        }
+
+        new_tx.validate()?;
+        self.transactions.push(new_tx);
         Ok(id)
     }
 
@@ -286,119 +293,85 @@ impl Journal {
         if params.len() < 2 {
             return Err(DomainError::InvalidTransactionOperation);
         }
-        let idx = self.transactions.iter().position(|t| t.id == source).ok_or(DomainError::InvalidTransactionOperation)?;
-        if self.transactions[idx].is_deleted {
+        let idx = self.transactions.iter().position(|t| t.has_id(source)).ok_or(DomainError::InvalidTransactionOperation)?;
+        if self.transactions[idx].is_deleted() {
             return Err(DomainError::InvalidTransactionOperation);
         }
 
-        let mut dest_entries = Vec::new();
-        let mut consumed_entries = HashMap::new();
+        let source_tx = &mut self.transactions[idx];
+        let mut new_transactions = Vec::new();
+        let mut result_ids = Vec::new();
 
-        {
-            let tx = &self.transactions[idx];
-            for p in &params {
-                if p.note.is_empty() {
-                    return Err(DomainError::InvalidTransactionOperation);
-                }
-                let mut entries = Vec::new();
-                for &eid in &p.entries {
-                    if consumed_entries.insert(eid, true).is_some() {
-                        return Err(DomainError::InvalidTransactionOperation);
-                    }
-                    let e_idx = tx.entries.iter().position(|e| e.id == eid).ok_or(DomainError::InvalidTransactionOperation)?;
-                    entries.push(tx.entries[e_idx].clone());
-                }
-                validate_date(p.date, &entries)?;
-                validate_balance(&entries)?;
-                dest_entries.push(entries);
+        for p in params {
+            if p.note.is_empty() {
+                return Err(DomainError::InvalidTransactionOperation);
             }
-
-            for e in &tx.entries {
-                if !consumed_entries.contains_key(&e.id) {
-                    return Err(DomainError::InvalidTransactionOperation);
-                }
-            }
-        }
-
-        let mut res = Vec::new();
-        for (i, p) in params.iter().enumerate() {
-            let id = TransactionId(generate_id_from_date(p.date));
-            let new_tx = Transaction {
+            let id = TransactionId::new(generate_id_from_date(p.date));
+            let mut tx = Transaction {
                 id,
                 date: p.date,
-                note: p.note.clone(),
-                entries: dest_entries[i].clone(),
+                note: p.note,
+                entries: Vec::new(),
                 book: self.book,
                 is_deleted: false,
             };
-            self.transactions.push(new_tx);
-            res.push(id);
+            for eid in p.entries {
+                let e_idx = source_tx.iter().position(|e| e.has_id(eid)).ok_or(DomainError::InvalidTransactionOperation)?;
+                let entry = source_tx.remove(e_idx);
+                tx.push_entry(entry);
+            }
+            tx.validate()?;
+            new_transactions.push(tx);
+            result_ids.push(id);
         }
 
-        self.transactions[idx].is_deleted = true;
-        self.transactions[idx].entries = Vec::new();
+        if !source_tx.is_empty() {
+            return Err(DomainError::InvalidTransactionOperation);
+        }
 
-        Ok(res)
+        source_tx.is_deleted = true;
+        self.transactions.append(&mut new_transactions);
+
+        Ok(result_ids)
     }
 
     pub fn update_entries(&mut self, source: TransactionId, reuse: Vec<EntryId>, created: Vec<Entry>) -> Result<TransactionId> {
-        let idx = self.transactions.iter().position(|t| t.id == source).ok_or(DomainError::InvalidTransactionOperation)?;
+        let idx = self.transactions.iter().position(|t| t.has_id(source)).ok_or(DomainError::InvalidTransactionOperation)?;
         
-        let (date, note, new_entries) = {
-            let tx = &self.transactions[idx];
-            if tx.is_deleted {
-                return Err(DomainError::InvalidTransactionOperation);
-            }
-
-            let mut new_entries = Vec::new();
-            for e in &tx.entries {
-                if reuse.contains(&e.id) {
-                    new_entries.push(e.clone());
-                } else {
-                    if e.is_protected {
-                        return Err(DomainError::InvalidTransactionOperation);
-                    }
-                }
-            }
-
-            for eid in &reuse {
-                if !tx.entries.iter().any(|e| e.id == *eid) {
-                    return Err(DomainError::InvalidTransactionOperation);
-                }
-            }
-
-            for e in &created {
-                e.validate()?;
-            }
-            validate_date(tx.date, &created)?;
-            new_entries.extend(created);
-
-            validate_balance(&new_entries)?;
-            (tx.date, tx.note.clone(), new_entries)
-        };
-
-        let id = TransactionId(generate_id_from_date(date));
-        
-        // Final modification
-        let mut delete_entries = Vec::new();
-        for e in self.transactions[idx].entries.drain(..) {
-            if !reuse.contains(&e.id) {
-                delete_entries.push(e);
-            }
+        if self.transactions[idx].is_deleted() {
+            return Err(DomainError::InvalidTransactionOperation);
         }
-        
-        self.transactions[idx].entries = delete_entries;
-        self.transactions[idx].is_deleted = true;
 
-        let dest = Transaction {
+        let source_tx = &mut self.transactions[idx];
+        let id = TransactionId::new(generate_id_from_date(source_tx.date));
+        let mut new_tx = Transaction {
             id,
-            date,
-            note,
-            entries: new_entries,
+            date: source_tx.date,
+            note: source_tx.note.clone(),
+            entries: Vec::new(),
             book: self.book,
             is_deleted: false,
         };
-        self.transactions.push(dest);
+
+        // Reuse entries
+        for eid in reuse {
+            let e_idx = source_tx.iter().position(|e| e.has_id(eid)).ok_or(DomainError::InvalidTransactionOperation)?;
+            new_tx.push_entry(source_tx.remove(e_idx));
+        }
+
+        // Add created entries
+        for e in created {
+            new_tx.push_entry(e);
+        }
+
+        // Check if remaining entries in source are protected
+        if source_tx.has_protected_entries() {
+            return Err(DomainError::InvalidTransactionOperation);
+        }
+
+        new_tx.validate()?;
+        source_tx.is_deleted = true;
+        self.transactions.push(new_tx);
 
         Ok(id)
     }
@@ -406,27 +379,30 @@ impl Journal {
 
 impl Account {
     pub fn create_entry(&self, date: DateTime<Utc>, note: String, amount: Amount) -> Result<Entry> {
-        let cat = match &self.category {
-            Relation::Loaded(c) => c,
-            Relation::Unloaded(_) => return Err(DomainError::System),
+        let (major, account_id) = {
+            let cat = match self.category() {
+                Relation::Loaded(c) => c,
+                Relation::Unloaded(_) => return Err(DomainError::System),
+            };
+            use crate::domain::HasId;
+            (cat.major(), self.id())
         };
 
         if amount.is_zero() {
             return Err(DomainError::InvalidEntry);
         }
-        amount.validate()?;
 
-        if amount.unit != self.unit && cat.major != MajorCategory::Equity {
+        if amount.unit() != self.unit() && major != MajorCategory::Equity {
             return Err(DomainError::InvalidEntry);
         }
 
         Ok(Entry {
-            id: EntryId(generate_id_from_date(date)),
+            id: EntryId::new(generate_id_from_date(date)),
             date: None,
             note,
             amount,
-            unit: Relation::Unloaded(amount.unit),
-            account: Relation::Unloaded(self.id),
+            unit: Relation::Unloaded(amount.unit()),
+            account: Relation::Unloaded(account_id),
             is_protected: false,
             provider_id: None,
         })
@@ -435,9 +411,10 @@ impl Account {
 
 impl Book {
     pub fn create_journal(&self) -> Journal {
+        use crate::domain::HasId;
         Journal {
             transactions: Vec::with_capacity(2),
-            book: self.id,
+            book: self.id(),
         }
     }
 }

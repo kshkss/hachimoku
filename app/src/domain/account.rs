@@ -1,14 +1,14 @@
-use crate::domain::{AccountId, CategoryId, UnitId, BookId, Result, DomainError, HasId, Relation};
+use crate::domain::{AccountId, CategoryId, UnitId, BookId, Result, HasId, Relation};
 use crate::domain::category::Category;
 use async_trait::async_trait;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Account {
-    pub id: AccountId,
-    pub name: String,
-    pub category: Relation<CategoryId, Category>,
-    pub unit: UnitId,
-    pub book: BookId,
+    id: AccountId,
+    name: String,
+    category: Relation<CategoryId, Category>,
+    unit: UnitId,
+    book: BookId,
 }
 
 impl HasId for Account {
@@ -19,22 +19,22 @@ impl HasId for Account {
 }
 
 impl Account {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() || self.name.is_empty() || self.unit.0.is_nil() || self.book.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        match &self.category {
-            Relation::Unloaded(id) => {
-                if id.0.is_empty() {
-                    return Err(DomainError::System);
-                }
-            }
-            Relation::Loaded(cat) => {
-                cat.validate()?;
-            }
-        }
-        Ok(())
+    pub fn has_id(&self, id: AccountId) -> bool {
+        self.id == id
     }
+
+    pub fn reconstruct(
+        id: AccountId,
+        name: String,
+        category: Relation<CategoryId, Category>,
+        unit: UnitId,
+        book: BookId,
+    ) -> Self {
+        Self { id, name, category, unit, book }
+    }
+    
+    pub fn unit(&self) -> UnitId { self.unit }
+    pub fn category(&self) -> &Relation<CategoryId, Category> { &self.category }
 }
 
 #[async_trait]

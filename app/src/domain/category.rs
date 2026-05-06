@@ -1,12 +1,12 @@
-use crate::domain::{CategoryId, MajorCategory, Result, DomainError, HasId};
+use crate::domain::{CategoryId, MajorCategory, Result, HasId};
 use async_trait::async_trait;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Category {
-    pub id: CategoryId,
-    pub major: MajorCategory,
-    pub minor: String,
-    pub is_active: bool,
+    id: CategoryId,
+    major: MajorCategory,
+    minor: String,
+    is_active: bool,
 }
 
 impl HasId for Category {
@@ -17,11 +17,16 @@ impl HasId for Category {
 }
 
 impl Category {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_empty() || self.minor.is_empty() {
-            return Err(DomainError::System);
-        }
-        Ok(())
+    pub fn has_id(&self, id: &CategoryId) -> bool {
+        &self.id == id
+    }
+
+    pub fn reconstruct(id: CategoryId, major: MajorCategory, minor: String, is_active: bool) -> Self {
+        Self { id, major, minor, is_active }
+    }
+
+    pub fn major(&self) -> MajorCategory {
+        self.major
     }
 }
 

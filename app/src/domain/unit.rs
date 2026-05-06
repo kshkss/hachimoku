@@ -1,14 +1,14 @@
-use crate::domain::{UnitId, BookId, Result, DomainError, HasId};
+use crate::domain::{UnitId, BookId, Result, HasId};
 use async_trait::async_trait;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Unit {
-    pub id: UnitId,
-    pub code: String,
-    pub symbol: String,
-    pub name: String,
-    pub precision: i32,
-    pub book: BookId,
+    id: UnitId,
+    code: String,
+    symbol: String,
+    name: String,
+    precision: i32,
+    book: BookId,
 }
 
 impl HasId for Unit {
@@ -19,14 +19,12 @@ impl HasId for Unit {
 }
 
 impl Unit {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() || self.code.is_empty() || self.name.is_empty() || self.book.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        if self.precision < 0 {
-            return Err(DomainError::System);
-        }
-        Ok(())
+    pub fn has_id(&self, id: UnitId) -> bool {
+        self.id == id
+    }
+
+    pub fn reconstruct(id: UnitId, code: String, symbol: String, name: String, precision: i32, book: BookId) -> Self {
+        Self { id, code, symbol, name, precision, book }
     }
 }
 

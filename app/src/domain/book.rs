@@ -4,13 +4,13 @@ use crate::domain::account::Account;
 use async_trait::async_trait;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Book {
-    pub id: BookId,
-    pub slug: BookSlug,
-    pub base_unit: UnitId,
-    pub name: String,
-    pub cabinet: CabinetId,
+    id: BookId,
+    slug: BookSlug,
+    base_unit: UnitId,
+    name: String,
+    cabinet: CabinetId,
 }
 
 impl HasId for Book {
@@ -21,39 +21,42 @@ impl HasId for Book {
 }
 
 impl Book {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() || self.base_unit.0.is_nil() || self.name.is_empty() || self.cabinet.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        Ok(())
+    pub fn has_id(&self, id: BookId) -> bool {
+        self.id == id
+    }
+
+    pub fn reconstruct(id: BookId, slug: BookSlug, base_unit: UnitId, name: String, cabinet: CabinetId) -> Self {
+        Self { id, slug, base_unit, name, cabinet }
     }
 
     pub fn create_unit(&self, code: String, symbol: String, name: String, precision: i32) -> Result<Unit> {
         if precision < 0 {
             return Err(DomainError::InvalidUnitPrecision);
         }
-        let unit = Unit {
-            id: UnitId(Uuid::now_v7()),
+        if code.is_empty() || name.is_empty() {
+             return Err(DomainError::System);
+        }
+        Ok(Unit::reconstruct(
+            UnitId::new(Uuid::now_v7()),
             code,
             symbol,
             name,
             precision,
-            book: self.id,
-        };
-        unit.validate()?;
-        Ok(unit)
+            self.id,
+        ))
     }
 
     pub fn create_account(&self, name: String, category_id: CategoryId, unit_id: UnitId) -> Result<Account> {
-        let account = Account {
-            id: AccountId(Uuid::now_v7()),
+        if name.is_empty() || category_id.as_str().is_empty() || unit_id.as_uuid().is_nil() {
+             return Err(DomainError::System);
+        }
+        Ok(Account::reconstruct(
+            AccountId::new(Uuid::now_v7()),
             name,
-            category: Relation::Unloaded(category_id),
-            unit: unit_id,
-            book: self.id,
-        };
-        account.validate()?;
-        Ok(account)
+            Relation::Unloaded(category_id),
+            unit_id,
+            self.id,
+        ))
     }
 }
 

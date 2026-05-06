@@ -1,16 +1,16 @@
-pub mod cabinet;
-pub mod book;
-pub mod category;
 pub mod account;
-pub mod unit;
+pub mod book;
+pub mod cabinet;
+pub mod category;
 pub mod transaction;
+pub mod unit;
 
-use thiserror::Error;
-use uuid::Uuid;
+use regex::Regex;
 use std::fmt;
 use std::str::FromStr;
-use regex::Regex;
 use std::sync::LazyLock;
+use thiserror::Error;
+use uuid::Uuid;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum DomainError {
@@ -63,19 +63,81 @@ pub enum CabinetType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct CabinetId(pub Uuid);
+pub struct CabinetId(Uuid);
+impl CabinetId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct BookId(pub Uuid);
+pub struct BookId(Uuid);
+impl BookId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct AccountId(pub Uuid);
+pub struct AccountId(Uuid);
+impl AccountId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct CategoryId(pub String);
+pub struct CategoryId(String);
+impl CategoryId {
+    pub fn new(id: String) -> Self {
+        Self(id)
+    }
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct UnitId(pub Uuid);
+pub struct UnitId(Uuid);
+impl UnitId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TransactionId(pub Uuid);
+pub struct TransactionId(Uuid);
+impl TransactionId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct EntryId(pub Uuid);
+pub struct EntryId(Uuid);
+impl EntryId {
+    pub fn new(id: Uuid) -> Self {
+        Self(id)
+    }
+    pub fn as_uuid(&self) -> Uuid {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Relation<I, T> {
@@ -84,10 +146,10 @@ pub enum Relation<I, T> {
 }
 
 impl<I, T> Relation<I, T> {
-    pub fn id(&self) -> I 
-    where 
+    pub fn id(&self) -> I
+    where
         I: Clone,
-        T: HasId<Id = I>
+        T: HasId<Id = I>,
     {
         match self {
             Relation::Unloaded(id) => id.clone(),
@@ -144,7 +206,8 @@ impl FromStr for MajorCategory {
     }
 }
 
-static SLUG_PATTERN: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
+static SLUG_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CabinetName(String);
@@ -154,8 +217,12 @@ impl CabinetName {
         if SLUG_PATTERN.is_match(&name) && name.len() >= 3 && name.len() <= 20 {
             Ok(Self(name))
         } else {
-            Err(DomainError::System) // Or a more specific error if available
+            Err(DomainError::System)
         }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 
@@ -176,6 +243,10 @@ impl BookSlug {
             Err(DomainError::InvalidBookSlug)
         }
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl fmt::Display for BookSlug {
@@ -186,8 +257,8 @@ impl fmt::Display for BookSlug {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Amount {
-    pub value: i32,
-    pub unit: UnitId,
+    value: i32,
+    unit: UnitId,
 }
 
 impl Amount {
@@ -198,18 +269,19 @@ impl Amount {
         Ok(Self { value, unit })
     }
 
-    pub fn validate(&self) -> Result<()> {
-        if self.value == 0 {
-            return Err(DomainError::System);
-        }
-        Ok(())
+    pub fn reconstruct(amount: i32, unit: UnitId) -> Self {
+        Self { value, unit }
+    }
+
+    pub fn unit(&self) -> UnitId {
+        self.unit
     }
 
     pub fn debit(&self) -> i32 {
         self.value.max(0)
     }
 
-    pub fn credit(&self) -> i32 {
+    pub fn credit(&self) -> u32 {
         (-self.value).max(0)
     }
 
@@ -220,7 +292,7 @@ impl Amount {
         }
     }
 
-    pub fn is_balance(&self) -> bool {
+    pub fn is_balanced(&self) -> bool {
         self.value == 0
     }
 
@@ -230,16 +302,16 @@ impl Amount {
 }
 
 impl std::ops::Add for Amount {
-    type Output = Result<Self>;
+    type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
         if self.unit != other.unit {
-            return Err(DomainError::System);
+            panic!("cannot add amounts with different units");
         }
-        Ok(Self {
+        Self {
             value: self.value + other.value,
             unit: self.unit,
-        })
+        }
     }
 }
 

@@ -1,15 +1,13 @@
+use crate::domain::{CabinetId, CabinetName, CabinetType, Result, DomainError, HasId, BookId, BookSlug, UnitId};
 use crate::domain::book::Book;
-use crate::domain::{
-    BookId, BookSlug, CabinetId, CabinetName, CabinetType, DomainError, HasId, Result, UnitId,
-};
 use async_trait::async_trait;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Cabinet {
-    pub id: CabinetId,
-    pub name: CabinetName,
-    pub cabinet_type: CabinetType,
+    id: CabinetId,
+    name: CabinetName,
+    cabinet_type: CabinetType,
 }
 
 impl HasId for Cabinet {
@@ -20,47 +18,48 @@ impl HasId for Cabinet {
 }
 
 impl Cabinet {
-    pub fn validate(&self) -> Result<()> {
-        if self.id.0.is_nil() {
-            return Err(DomainError::System);
-        }
-        Ok(())
+    pub fn has_id(&self, id: CabinetId) -> bool {
+        self.id == id
     }
 
     pub fn new(id: CabinetId, name: CabinetName) -> Result<Self> {
-        let cabinet = Self {
-            id,
-            name,
+        if id.as_uuid().is_nil() {
+            return Err(DomainError::System);
+        }
+        Ok(Self { 
+            id, 
+            name, 
             cabinet_type: CabinetType::Shared,
-        };
-        cabinet.validate()?;
-        Ok(cabinet)
+        })
     }
 
     pub fn with_ownership(name: CabinetName) -> Result<Self> {
-        let cabinet = Self {
-            id: CabinetId(Uuid::now_v7()),
+        Ok(Self {
+            id: CabinetId::new(Uuid::now_v7()),
             name,
             cabinet_type: CabinetType::Owned,
-        };
-        cabinet.validate()?;
-        Ok(cabinet)
+        })
+    }
+
+    pub fn reconstruct(id: CabinetId, name: CabinetName, cabinet_type: CabinetType) -> Self {
+        Self { id, name, cabinet_type }
     }
 
     pub fn create_book(&self, slug: BookSlug, name: String, base_unit: UnitId) -> Result<Book> {
         if self.cabinet_type != CabinetType::Owned {
             return Err(DomainError::PermissionDenied);
         }
+        if name.is_empty() || base_unit.as_uuid().is_nil() {
+             return Err(DomainError::System);
+        }
 
-        let book = Book {
-            id: BookId(Uuid::now_v7()),
+        Ok(Book::reconstruct(
+            BookId::new(Uuid::now_v7()),
             slug,
             base_unit,
             name,
-            cabinet: self.id,
-        };
-        book.validate()?;
-        Ok(book)
+            self.id,
+        ))
     }
 }
 
