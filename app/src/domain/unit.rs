@@ -1,14 +1,16 @@
-use crate::domain::{UnitId, BookId, Result, HasId};
+use crate::domain::{UnitId, BookId, Result, DomainError, HasId};
+use crate::domain::book::Book;
 use async_trait::async_trait;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Unit {
-    id: UnitId,
-    code: String,
-    symbol: String,
-    name: String,
-    precision: i32,
-    book: BookId,
+    pub(super) id: UnitId,
+    pub(super) code: String,
+    pub(super) symbol: String,
+    pub(super) name: String,
+    pub(super) precision: i32,
+    pub(super) book: BookId,
 }
 
 impl HasId for Unit {
@@ -23,8 +25,28 @@ impl Unit {
         self.id == id
     }
 
-    pub fn reconstruct(id: UnitId, code: String, symbol: String, name: String, precision: i32, book: BookId) -> Self {
-        Self { id, code, symbol, name, precision, book }
+    pub fn reconstruct(id: UnitId, code: String, symbol: String, name: String, precision: i32, book: BookId) -> Result<Self> {
+        Ok(Self { id, code, symbol, name, precision, book })
+    }
+}
+
+impl Book {
+    pub fn create_unit(&self, code: String, symbol: String, name: String, precision: i32) -> Result<Unit> {
+        if precision < 0 {
+            return Err(DomainError::InvalidUnitPrecision);
+        }
+        if code.is_empty() || name.is_empty() {
+             return Err(DomainError::System);
+        }
+        use crate::domain::HasId;
+        Ok(Unit {
+            id: UnitId::new(Uuid::now_v7()),
+            code,
+            symbol,
+            name,
+            precision,
+            book: self.id(),
+        })
     }
 }
 

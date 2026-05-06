@@ -21,8 +21,8 @@ impl Category {
         &self.id == id
     }
 
-    pub fn reconstruct(id: CategoryId, major: MajorCategory, minor: String, is_active: bool) -> Self {
-        Self { id, major, minor, is_active }
+    pub fn reconstruct(id: CategoryId, major: MajorCategory, minor: String, is_active: bool) -> Result<Self> {
+        Ok(Self { id, major, minor, is_active })
     }
 
     pub fn major(&self) -> MajorCategory {

@@ -1,4 +1,4 @@
-use crate::domain::{TransactionId, EntryId, BookId, AccountId, UnitId, Amount, Result, DomainError, Relation, MajorCategory};
+use crate::domain::{TransactionId, EntryId, BookId, AccountId, UnitId, Amount, Result, DomainError, HasId, Relation, MajorCategory};
 use crate::domain::account::Account;
 use crate::domain::unit::Unit;
 use crate::domain::book::Book;
@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Journal {
-    transactions: Vec<Transaction>,
-    book: BookId,
+    pub(super) transactions: Vec<Transaction>,
+    pub(super) book: BookId,
 }
 
 #[derive(Debug)]
@@ -22,24 +22,24 @@ pub struct TransactionParam {
 
 #[derive(Debug)]
 pub struct Transaction {
-    id: TransactionId,
-    date: DateTime<Utc>,
-    note: String,
-    entries: Vec<Entry>,
-    book: BookId,
-    is_deleted: bool,
+    pub(super) id: TransactionId,
+    pub(super) date: DateTime<Utc>,
+    pub(super) note: String,
+    pub(super) entries: Vec<Entry>,
+    pub(super) book: BookId,
+    pub(super) is_deleted: bool,
 }
 
 #[derive(Debug)]
 pub struct Entry {
-    id: EntryId,
-    date: Option<DateTime<Utc>>,
-    note: String,
-    amount: Amount,
-    unit: Relation<UnitId, Unit>,
-    account: Relation<AccountId, Account>,
-    is_protected: bool,
-    provider_id: Option<String>,
+    pub(super) id: EntryId,
+    pub(super) date: Option<DateTime<Utc>>,
+    pub(super) note: String,
+    pub(super) amount: Amount,
+    pub(super) unit: Relation<UnitId, Unit>,
+    pub(super) account: Relation<AccountId, Account>,
+    pub(super) is_protected: bool,
+    pub(super) provider_id: Option<String>,
 }
 
 fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
@@ -65,8 +65,8 @@ impl Entry {
         account: Relation<AccountId, Account>,
         is_protected: bool,
         provider_id: Option<String>,
-    ) -> Self {
-        Self { id, date, note, amount, unit, account, is_protected, provider_id }
+    ) -> Result<Self> {
+        Ok(Self { id, date, note, amount, unit, account, is_protected, provider_id })
     }
 
     pub fn is_date_match(&self, date: DateTime<Utc>) -> bool {
@@ -87,20 +87,6 @@ impl Entry {
     pub fn unit(&self) -> UnitId {
         self.amount.unit()
     }
-
-    pub fn mark_protected(&mut self, date: DateTime<Utc>, note: String, provider_id: String) -> Result<()> {
-        if self.is_protected {
-            return Err(DomainError::InvalidEntry);
-        }
-        if note.is_empty() || provider_id.is_empty() {
-            return Err(DomainError::InvalidEntry);
-        }
-        self.date = Some(date);
-        self.note = note;
-        self.provider_id = Some(provider_id);
-        self.is_protected = true;
-        Ok(())
-    }
 }
 
 impl Transaction {
@@ -115,8 +101,8 @@ impl Transaction {
         entries: Vec<Entry>,
         book: BookId,
         is_deleted: bool,
-    ) -> Self {
-        Self { id, date, note, entries, book, is_deleted }
+    ) -> Result<Self> {
+        Ok(Self { id, date, note, entries, book, is_deleted })
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -187,8 +173,8 @@ impl Transaction {
 }
 
 impl Journal {
-    pub fn reconstruct(transactions: Vec<Transaction>, book: BookId) -> Self {
-        Self { transactions, book }
+    pub fn reconstruct(transactions: Vec<Transaction>, book: BookId) -> Result<Self> {
+        Ok(Self { transactions, book })
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -259,7 +245,7 @@ impl Journal {
         let mut indices = Vec::new();
         for tid in &transaction_ids {
             let idx = self.transactions.iter().position(|t| t.has_id(*tid)).ok_or(DomainError::InvalidTransactionOperation)?;
-            if self.transactions[idx].is_deleted() {
+            if self.transactions[idx].is_deleted {
                 return Err(DomainError::InvalidTransactionOperation);
             }
             if indices.contains(&idx) {

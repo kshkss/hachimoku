@@ -269,20 +269,26 @@ impl Amount {
         Ok(Self { value, unit })
     }
 
-    pub fn reconstruct(amount: i32, unit: UnitId) -> Self {
-        Self { value, unit }
+    pub fn reconstruct(debit: u32, credit: u32, unit: UnitId) -> Result<Self> {
+        const MAXINT: u32 = i32::MAX as u32;
+        if debit > MAXINT || credit > MAXINT {
+            Err(DomainError::System)
+        } else {
+            let value = debit as i32 - credit as i32;
+            Ok(Self { value, unit })
+        }
     }
 
     pub fn unit(&self) -> UnitId {
         self.unit
     }
 
-    pub fn debit(&self) -> i32 {
-        self.value.max(0)
+    pub fn debit(&self) -> u32 {
+        self.value.max(0) as u32
     }
 
     pub fn credit(&self) -> u32 {
-        (-self.value).max(0)
+        (-self.value).max(0) as u32
     }
 
     pub fn neg(&self) -> Self {
