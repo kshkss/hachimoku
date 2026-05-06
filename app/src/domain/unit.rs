@@ -15,6 +15,7 @@ pub struct Unit {
     precision: u8,
     /// Book はこの単位を所有する帳簿の ID です。
     book: BookId,
+    is_active: bool,
 }
 
 impl Entity for Unit {
@@ -33,6 +34,7 @@ impl Unit {
         name: String,
         precision: u8,
         book: BookId,
+        is_active: bool,
     ) -> Result<Self> {
         if precision > 8 {
             Err(DomainError::InvalidUnitPrecision)
@@ -44,8 +46,13 @@ impl Unit {
                 name,
                 precision,
                 book,
+                is_active,
             })
         }
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 }
 
@@ -73,6 +80,7 @@ impl Book {
             name,
             precision,
             book: self.id(),
+            is_active: true,
         })
     }
 }
@@ -147,8 +155,10 @@ mod tests {
             "Yen".to_string(),
             0,
             book_id,
+            true,
         )
         .unwrap();
         assert!(unit.has_id(id));
+        assert!(unit.is_active());
     }
 }
