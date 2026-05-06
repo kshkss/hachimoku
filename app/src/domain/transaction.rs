@@ -686,6 +686,7 @@ mod tests {
             Relation::Loaded(cat),
             unit,
             book.id(),
+            true,
         )
         .unwrap()
     }

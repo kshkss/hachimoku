@@ -15,6 +15,7 @@ pub struct Account {
     unit: UnitId,
     /// Book はこの科目を所有する帳簿の ID です。
     book: BookId,
+    is_active: bool,
 }
 
 impl Entity for Account {
@@ -32,6 +33,7 @@ impl Account {
         category: Relation<CategoryId, Category>,
         unit: UnitId,
         book: BookId,
+        is_active: bool,
     ) -> Result<Self> {
         Ok(Self {
             id,
@@ -39,6 +41,7 @@ impl Account {
             category,
             unit,
             book,
+            is_active,
         })
     }
 
@@ -47,6 +50,9 @@ impl Account {
     }
     pub fn category(&self) -> &Relation<CategoryId, Category> {
         &self.category
+    }
+    pub fn is_active(&self) -> bool {
+        self.is_active
     }
 }
 
@@ -68,6 +74,7 @@ impl Book {
             category: Relation::Unloaded(category_id),
             unit: unit_id,
             book: self.id(),
+            is_active: true,
         })
     }
 }
@@ -132,8 +139,10 @@ mod tests {
             Relation::Unloaded(cat_id),
             unit_id,
             book_id,
+            true,
         )
         .unwrap();
         assert!(account.has_id(id));
+        assert!(account.is_active());
     }
 }
