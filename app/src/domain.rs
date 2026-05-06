@@ -377,3 +377,88 @@ impl std::ops::Add for Amount {
 
 /// 未分類のカテゴリー ID 定数です。
 pub const CATEGORY_UNCLASSIFIED: &str = "eq_unclassified";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_cabinet_name_validation() {
+        // 正常系：許可される文字（英数字、ハイフン）と長さ（3-20）
+        assert!(CabinetName::new("my-cabinet".to_string()).is_ok());
+        assert!(CabinetName::new("cab123".to_string()).is_ok());
+        assert!(CabinetName::new("a-b-c".to_string()).is_ok());
+
+        // 異常系：短すぎる
+        assert!(CabinetName::new("ab".to_string()).is_err());
+        // 異常系：長すぎる（21文字）
+        assert!(CabinetName::new("a".repeat(21)).is_err());
+        // 異常系：不正な文字（大文字、アンダースコア、スペース）
+        assert!(CabinetName::new("MyCabinet".to_string()).is_err());
+        assert!(CabinetName::new("my_cabinet".to_string()).is_err());
+        assert!(CabinetName::new("my cabinet".to_string()).is_err());
+        // 異常系：ハイフンの使用法（先頭、末尾、連続）
+        assert!(CabinetName::new("-abc".to_string()).is_err());
+        assert!(CabinetName::new("abc-".to_string()).is_err());
+        assert!(CabinetName::new("abc--def".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_book_slug_validation() {
+        // 正常系：許可される形式
+        assert!(BookSlug::new("my-book".to_string()).is_ok());
+        assert!(BookSlug::new("slug123".to_string()).is_ok());
+
+        // 異常系：短すぎる（3文字未満）
+        assert!(BookSlug::new("ab".to_string()).is_err());
+        // 異常系：長すぎる
+        assert!(BookSlug::new("a".repeat(21)).is_err());
+        // 異常系：不正な文字
+        assert!(BookSlug::new("MyBook".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_amount_operations() {
+        let unit = UnitId::new(Uuid::now_v7());
+
+        // 正常系：借方(debit)と貸方(credit)の生成と値の整合性
+        let d = Amount::new_debit(100, unit).unwrap();
+        assert_eq!(d.debit(), 100);
+        assert_eq!(d.credit(), 0);
+
+        let c = Amount::new_credit(50, unit).unwrap();
+        assert_eq!(c.debit(), 0);
+        assert_eq!(c.credit(), 50);
+
+        // 正常系：インフラ層を想定した復元（reconstruct）とバランス判定
+        let r = Amount::reconstruct(100, 150, unit).unwrap();
+        assert_eq!(r.debit(), 0);
+        assert_eq!(r.credit(), 50);
+        assert_eq!(r.is_balanced(), false);
+
+        // 正常系：符号反転（neg）
+        let n = d.neg();
+        assert_eq!(n.credit(), 100);
+
+        // 正常系：金額の加算（バランスの推移）
+        let sum = d + c;
+        assert_eq!(sum.debit(), 50);
+        assert_eq!(sum.credit(), 0);
+
+        let balanced = d + d.neg();
+        assert!(balanced.is_balanced());
+        assert!(balanced.is_zero());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot add amounts with different units")]
+    fn test_amount_add_different_units_panic() {
+        // 異常系：異なる単位間での加算は panic! することを確認
+        let u1 = UnitId::new(Uuid::now_v7());
+        let u2 = UnitId::new(Uuid::now_v7());
+        let a1 = Amount::new_debit(100, u1).unwrap();
+        let a2 = Amount::new_debit(100, u2).unwrap();
+        let _ = a1 + a2;
+    }
+}

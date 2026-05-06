@@ -80,3 +80,60 @@ pub trait UnitRepository: Send + Sync {
     /// Unit 情報を作成または更新します。
     async fn save_unit(&self, unit: &Unit) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::BookSlug;
+
+    #[test]
+    fn test_create_unit_validation() {
+        let cab_id = crate::domain::CabinetId::new(Uuid::now_v7());
+        let book_id = BookId::new(Uuid::now_v7());
+        let book = Book::reconstruct(
+            book_id,
+            BookSlug::new("slug".to_string()).unwrap(),
+            UnitId::new(Uuid::now_v7()),
+            "Book".to_string(),
+            cab_id,
+        )
+        .unwrap();
+
+        // 正常系：有効な単位が作成できることを確認
+        assert!(
+            book.create_unit("USD".to_string(), "$".to_string(), "Dollar".to_string(), 2)
+                .is_ok()
+        );
+
+        // 異常系：精密度の負数は許可されないことを確認
+        let res = book.create_unit("USD".to_string(), "$".to_string(), "Dollar".to_string(), -1);
+        assert!(matches!(res, Err(DomainError::InvalidUnitPrecision)));
+
+        // 異常系：コードや名称が空の場合はエラーとなることを確認
+        assert!(
+            book.create_unit("".to_string(), "$".to_string(), "Dollar".to_string(), 2)
+                .is_err()
+        );
+        assert!(
+            book.create_unit("USD".to_string(), "$".to_string(), "".to_string(), 2)
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_unit_reconstruct() {
+        let id = UnitId::new(Uuid::now_v7());
+        let book_id = BookId::new(Uuid::now_v7());
+        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
+        let unit = Unit::reconstruct(
+            id,
+            "JPY".to_string(),
+            "¥".to_string(),
+            "Yen".to_string(),
+            0,
+            book_id,
+        )
+        .unwrap();
+        assert!(unit.has_id(id));
+    }
+}

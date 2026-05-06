@@ -72,3 +72,41 @@ pub trait BookRepository: Send + Sync {
     /// Book 情報を保存（作成または更新）します。
     async fn save_book(&self, book: &Book) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_create_book_permissions() {
+        let name = CabinetName::new("cab".to_string()).unwrap();
+        let owned_cab = Cabinet::with_ownership(name.clone()).unwrap();
+        let shared_cab = Cabinet::new(CabinetId::new(Uuid::now_v7()), name).unwrap();
+
+        let slug = BookSlug::new("my-book".to_string()).unwrap();
+        let unit = UnitId::new(Uuid::now_v7());
+
+        // 正常系：所有権を持つキャビネットからは帳簿を作成できることを確認
+        assert!(
+            owned_cab
+                .create_book(slug.clone(), "Book Name".to_string(), unit)
+                .is_ok()
+        );
+
+        // 異常系：共有されたキャビネットからは帳簿を作成できず、PermissionDenied となることを確認
+        let res = shared_cab.create_book(slug, "Book Name".to_string(), unit);
+        assert!(matches!(res, Err(DomainError::PermissionDenied)));
+    }
+
+    #[test]
+    fn test_book_reconstruct() {
+        let id = BookId::new(Uuid::now_v7());
+        let slug = BookSlug::new("slug".to_string()).unwrap();
+        let unit = UnitId::new(Uuid::now_v7());
+        let cab_id = CabinetId::new(Uuid::now_v7());
+        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
+        let book = Book::reconstruct(id, slug, unit, "Name".to_string(), cab_id).unwrap();
+        assert!(book.has_id(id));
+    }
+}

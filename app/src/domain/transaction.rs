@@ -651,3 +651,412 @@ pub trait TransactionRepository: Send + Sync {
     /// 取引とエントリーを追加・削除・更新します。
     async fn update_transactions(&self, journal: &Journal) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::{BookSlug, Cabinet, CabinetId, CabinetName, Category, CategoryId, UnitId};
+    use uuid::Uuid;
+
+    fn setup_book() -> (Book, UnitId) {
+        let cab = Cabinet::with_ownership(CabinetName::new("cab".to_string()).unwrap()).unwrap();
+        let unit_id = UnitId::new(Uuid::now_v7());
+        let book = cab
+            .create_book(
+                BookSlug::new("book".to_string()).unwrap(),
+                "Book".to_string(),
+                unit_id,
+            )
+            .unwrap();
+        (book, unit_id)
+    }
+
+    fn setup_account(book: &Book, unit: UnitId) -> Account {
+        let cat_id = CategoryId::new("cat".to_string());
+        let cat = Category::reconstruct(
+            cat_id.clone(),
+            MajorCategory::Asset,
+            "Minor".to_string(),
+            true,
+        )
+        .unwrap();
+        Account::reconstruct(
+            AccountId::new(Uuid::now_v7()),
+            "Acc".to_string(),
+            Relation::Loaded(cat),
+            unit,
+            book.id(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn test_entry_protection() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+        let entry = acc
+            .create_entry(
+                date,
+                "Note".to_string(),
+                Amount::new_debit(100, unit).unwrap(),
+            )
+            .unwrap();
+
+        // 正常系：初期状態では保護されていないことを確認
+        assert!(!entry.is_protected());
+
+        // 正常系：正しく保護状態に移行できることを確認
+        let protected = entry
+            .mark_protected(date, "Protected Note".to_string(), "provider-1".to_string())
+            .unwrap();
+        assert!(protected.is_protected());
+        assert!(protected.is_date_match(date));
+
+        // 異常系：二重に保護しようとするとエラーになることを確認
+        assert!(
+            protected
+                .mark_protected(date, "fail".to_string(), "id".to_string())
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_transaction_balancing() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+
+        let e1 = acc
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .unwrap();
+        let e2 = acc
+            .create_entry(
+                date,
+                "C".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+
+        // 正常系：貸借が一致し、日付が整合している取引が妥当（validate OK）であることを確認
+        let mut tx = Transaction::reconstruct(
+            TransactionId::new(Uuid::now_v7()),
+            date,
+            "Note".to_string(),
+            vec![e1, e2],
+            book.id(),
+            false,
+        )
+        .unwrap();
+        assert!(tx.validate().is_ok());
+
+        // 異常系：貸借が一致しなくなった取引がバリデーションエラー（InvalidTransactionOperation）になることを確認
+        let e3 = acc
+            .create_entry(date, "D".to_string(), Amount::new_debit(10, unit).unwrap())
+            .unwrap();
+        tx.push_entry(e3);
+        assert!(matches!(
+            tx.validate(),
+            Err(DomainError::InvalidTransactionOperation)
+        ));
+    }
+
+    #[test]
+    fn test_journal_update_ownership_move() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+        let mut journal = book.create_journal();
+
+        let e1 = acc
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .unwrap();
+        let e2 = acc
+            .create_entry(
+                date,
+                "C".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+
+        let tx_id = journal
+            .create_transaction(date, "Old Note".to_string(), vec![e1, e2])
+            .unwrap();
+
+        // 正常系：取引の更新（update）により、エントリーの所有権が新しい取引へ移動することを確認
+        let new_date = date + chrono::Duration::days(1);
+        let new_tx_id = journal
+            .update(tx_id, new_date, "New Note".to_string())
+            .unwrap();
+
+        assert_ne!(tx_id, new_tx_id);
+
+        // 旧取引は削除済みかつ空（エントリーが移動済み）であるべき
+        let old_tx = journal
+            .transactions
+            .iter()
+            .find(|t| t.has_id(tx_id))
+            .unwrap();
+        assert!(old_tx.is_deleted());
+        assert!(old_tx.is_empty());
+
+        // 新取引は有効で、エントリーを保持しているべき
+        let new_tx = journal
+            .transactions
+            .iter()
+            .find(|t| t.has_id(new_tx_id))
+            .unwrap();
+        assert!(!new_tx.is_deleted());
+        assert_eq!(new_tx.len(), 2);
+        assert_eq!(new_tx.date, new_date);
+    }
+
+    #[test]
+    fn test_journal_merge() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+        let mut journal = book.create_journal();
+
+        let tx1_id = journal
+            .create_transaction(
+                date,
+                "T1".to_string(),
+                vec![
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+                        .unwrap(),
+                    acc.create_entry(
+                        date,
+                        "C".to_string(),
+                        Amount::new_credit(100, unit).unwrap(),
+                    )
+                    .unwrap(),
+                ],
+            )
+            .unwrap();
+
+        let tx2_id = journal
+            .create_transaction(
+                date,
+                "T2".to_string(),
+                vec![
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(50, unit).unwrap())
+                        .unwrap(),
+                    acc.create_entry(date, "C".to_string(), Amount::new_credit(50, unit).unwrap())
+                        .unwrap(),
+                ],
+            )
+            .unwrap();
+
+        // 正常系：2つの取引をマージし、エントリーが統合されることを確認
+        let merged_id = journal
+            .merge(date, "Merged".to_string(), vec![tx1_id, tx2_id])
+            .unwrap();
+
+        let merged_tx = journal
+            .transactions
+            .iter()
+            .find(|t| t.has_id(merged_id))
+            .unwrap();
+        assert_eq!(merged_tx.len(), 4);
+
+        // 元の取引はすべて削除済みとなっているべき
+        assert!(
+            journal
+                .transactions
+                .iter()
+                .find(|t| t.has_id(tx1_id))
+                .unwrap()
+                .is_deleted()
+        );
+        assert!(
+            journal
+                .transactions
+                .iter()
+                .find(|t| t.has_id(tx2_id))
+                .unwrap()
+                .is_deleted()
+        );
+    }
+
+    #[test]
+    fn test_journal_divide() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+        let mut journal = book.create_journal();
+
+        let e1 = acc
+            .create_entry(
+                date,
+                "D1".to_string(),
+                Amount::new_debit(100, unit).unwrap(),
+            )
+            .unwrap();
+        let e1_id = e1.id();
+        let e2 = acc
+            .create_entry(
+                date,
+                "C1".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+        let e2_id = e2.id();
+        let e3 = acc
+            .create_entry(date, "D2".to_string(), Amount::new_debit(50, unit).unwrap())
+            .unwrap();
+        let e3_id = e3.id();
+        let e4 = acc
+            .create_entry(
+                date,
+                "C2".to_string(),
+                Amount::new_credit(50, unit).unwrap(),
+            )
+            .unwrap();
+        let e4_id = e4.id();
+
+        let source_id = journal
+            .create_transaction(date, "Source".to_string(), vec![e1, e2, e3, e4])
+            .unwrap();
+
+        // 正常系：1つの取引を2つに分割し、それぞれが独立して貸借一致することを確認
+        let params = vec![
+            TransactionParam {
+                date,
+                note: "Part 1".to_string(),
+                entries: vec![e1_id, e2_id],
+            },
+            TransactionParam {
+                date,
+                note: "Part 2".to_string(),
+                entries: vec![e3_id, e4_id],
+            },
+        ];
+
+        let res = journal.divide(source_id, params).unwrap();
+        assert_eq!(res.len(), 2);
+
+        let source_tx = journal
+            .transactions
+            .iter()
+            .find(|t| t.has_id(source_id))
+            .unwrap();
+        assert!(source_tx.is_deleted());
+        assert!(source_tx.is_empty());
+
+        assert_eq!(
+            journal
+                .transactions
+                .iter()
+                .find(|t| t.has_id(res[0]))
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            journal
+                .transactions
+                .iter()
+                .find(|t| t.has_id(res[1]))
+                .unwrap()
+                .len(),
+            2
+        );
+    }
+
+    #[test]
+    fn test_journal_update_entries() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+        let mut journal = book.create_journal();
+
+        let e1 = acc
+            .create_entry(
+                date,
+                "Reuse".to_string(),
+                Amount::new_debit(100, unit).unwrap(),
+            )
+            .unwrap();
+        let e1_id = e1.id();
+        let e2 = acc
+            .create_entry(
+                date,
+                "Delete".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+
+        let source_id = journal
+            .create_transaction(date, "Source".to_string(), vec![e1, e2])
+            .unwrap();
+
+        // 正常系：特定のエントリーを保持しつつ、新しいエントリーを追加して取引を更新できることを確認
+        let e3 = acc
+            .create_entry(
+                date,
+                "New".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+
+        let new_tx_id = journal
+            .update_entries(source_id, vec![e1_id], vec![e3])
+            .unwrap();
+
+        let new_tx = journal
+            .transactions
+            .iter()
+            .find(|t| t.has_id(new_tx_id))
+            .unwrap();
+        assert_eq!(new_tx.len(), 2);
+        assert!(new_tx.iter().any(|e| e.has_id(e1_id)));
+
+        assert!(
+            journal
+                .transactions
+                .iter()
+                .find(|t| t.has_id(source_id))
+                .unwrap()
+                .is_deleted()
+        );
+    }
+
+    #[test]
+    fn test_journal_validate_protected_in_deleted() {
+        let (book, unit) = setup_book();
+        let acc = setup_account(&book, unit);
+        let date = Utc::now();
+
+        let e1 = acc
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .unwrap();
+        let e2 = acc
+            .create_entry(
+                date,
+                "C".to_string(),
+                Amount::new_credit(100, unit).unwrap(),
+            )
+            .unwrap();
+        let e1_protected = e1
+            .mark_protected(date, "P".to_string(), "id".to_string())
+            .unwrap();
+
+        // 異常系：削除対象の取引に保護済みエントリーが含まれている場合、Journal::validate がエラーを返すことを確認
+        let tx = Transaction::reconstruct(
+            TransactionId::new(Uuid::now_v7()),
+            date,
+            "Note".to_string(),
+            vec![e1_protected, e2],
+            book.id(),
+            true,
+        )
+        .unwrap();
+        let journal = Journal::reconstruct(vec![tx], book.id()).unwrap();
+
+        assert!(matches!(
+            journal.validate(),
+            Err(DomainError::InvalidTransactionOperation)
+        ));
+    }
+}

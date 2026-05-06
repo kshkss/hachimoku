@@ -45,3 +45,19 @@ pub trait CategoryUpdater: Send + Sync {
     /// 存在しない ID の場合は新規作成、存在する場合は更新、指定されなかった既存 ID は無効化されます。
     async fn update_categories(&self, config: &[Category]) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_category_reconstruct() {
+        let id = CategoryId::new("cat-id".to_string());
+        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
+        let cat =
+            Category::reconstruct(id.clone(), MajorCategory::Asset, "Minor".to_string(), true)
+                .unwrap();
+        assert!(cat.has_id(id));
+        assert_eq!(cat.major(), MajorCategory::Asset);
+    }
+}

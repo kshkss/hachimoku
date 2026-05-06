@@ -60,3 +60,35 @@ pub trait CabinetRepository: Send + Sync {
     /// Cabinet 情報を保存します。
     async fn save_cabinet(&self, cabinet: &Cabinet) -> Result<()>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use uuid::Uuid;
+
+    #[test]
+    fn test_cabinet_creation() {
+        let name = CabinetName::new("my-cab".to_string()).unwrap();
+        let id = CabinetId::new(Uuid::now_v7());
+
+        // 正常系：new() は Shared タイプのキャビネットを作成することを確認
+        let cab = Cabinet::new(id, name.clone()).unwrap();
+        assert_eq!(cab.cabinet_type, CabinetType::Shared);
+        assert!(cab.has_id(id));
+
+        // 正常系：with_ownership() は Owned タイプのキャビネットを作成し、新しい ID が発行されることを確認
+        let cab_owned = Cabinet::with_ownership(name).unwrap();
+        assert_eq!(cab_owned.cabinet_type, CabinetType::Owned);
+        assert!(!cab_owned.has_id(id));
+    }
+
+    #[test]
+    fn test_cabinet_reconstruct() {
+        let name = CabinetName::new("my-cab".to_string()).unwrap();
+        let id = CabinetId::new(Uuid::now_v7());
+        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
+        let cab = Cabinet::reconstruct(id, name, CabinetType::Owned).unwrap();
+        assert_eq!(cab.cabinet_type, CabinetType::Owned);
+        assert!(cab.has_id(id));
+    }
+}
