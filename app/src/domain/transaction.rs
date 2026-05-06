@@ -62,6 +62,24 @@ impl Entity for Entry {
 }
 
 impl Entry {
+    pub fn mark_protected(
+        self,
+        date: DateTime<Utc>,
+        note: String,
+        provider_id: String,
+    ) -> Result<Self> {
+        if note.is_empty() {
+            Err(DomainError::InvalidEntry)
+        } else {
+            Ok(Self {
+                date: Some(date),
+                note,
+                is_protected: true,
+                provider_id: Some(provider_id),
+                ..self
+            })
+        }
+    }
 
     pub fn reconstruct(
         id: EntryId,
