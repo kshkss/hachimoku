@@ -51,6 +51,16 @@ impl Cabinet {
             cabinet_type,
         })
     }
+
+    /// Owned タイプの Cabinet であれば true を返します。
+    pub fn is_owned(&self) -> bool {
+        self.cabinet_type == CabinetType::Owned
+    }
+
+    /// Shared タイプの Cabinet であれば true を返します。
+    pub fn is_shared(&self) -> bool {
+        self.cabinet_type == CabinetType::Shared
+    }
 }
 
 #[async_trait]
