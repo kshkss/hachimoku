@@ -48,7 +48,7 @@ impl Cabinet {
     /// 指定された Cabinet が所有する新しい Book を作成します。
     /// CabinetType が Owned でない場合、権限エラーを返します。
     pub fn create_book(&self, slug: BookSlug, name: String, base_unit: UnitId) -> Result<Book> {
-        if self.cabinet_type != CabinetType::Owned {
+        if self.is_shared() {
             return Err(DomainError::PermissionDenied);
         }
         if name.is_empty() || base_unit.as_uuid().is_nil() {
