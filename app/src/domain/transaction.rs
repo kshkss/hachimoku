@@ -199,7 +199,7 @@ impl Transaction {
             }
             let amount = e.amount();
             if amount.is_zero() {
-                return Err(DomainError::InvalidTransactionOperation);
+                return Err(DomainError::InvalidEntry);
             }
             match sum.get_mut(&amount.unit()) {
                 Some(existing) => {
