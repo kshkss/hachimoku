@@ -12,7 +12,7 @@ pub struct Unit {
     pub(super) symbol: String,
     /// Name は単位の名称で、帳簿内で一意である必要があります。
     pub(super) name: String,
-    pub(super) precision: i32,
+    pub(super) precision: u8,
     /// Book はこの単位を所有する帳簿の ID です。
     pub(super) book: BookId,
 }
@@ -31,31 +31,35 @@ impl Unit {
         code: String,
         symbol: String,
         name: String,
-        precision: i32,
+        precision: u8,
         book: BookId,
     ) -> Result<Self> {
-        Ok(Self {
-            id,
-            code,
-            symbol,
-            name,
-            precision,
-            book,
-        })
+        if precision > 8 {
+            Err(DomainError::InvalidUnitPrecision)
+        } else {
+            Ok(Self {
+                id,
+                code,
+                symbol,
+                name,
+                precision,
+                book,
+            })
+        }
     }
 }
 
 impl Book {
     /// 帳簿が所有する新しい Unit を作成します。
-    /// precision は小数点以下の表示桁数を表します。負の値が指定された場合はエラーを返します。
+    /// precision は小数点以下の表示桁数を表し、0から8の範囲である必要があります。
     pub fn create_unit(
         &self,
         code: String,
         symbol: String,
         name: String,
-        precision: i32,
+        precision: u8,
     ) -> Result<Unit> {
-        if precision < 0 {
+        if precision > 8 {
             return Err(DomainError::InvalidUnitPrecision);
         }
         if code.is_empty() || name.is_empty() {
@@ -105,8 +109,19 @@ mod tests {
                 .is_ok()
         );
 
-        // 異常系：精密度の負数は許可されないことを確認
-        let res = book.create_unit("USD".to_string(), "$".to_string(), "Dollar".to_string(), -1);
+        // 正常系：精密度の境界値(8)が許可されることを確認
+        assert!(
+            book.create_unit("BTC".to_string(), "₿".to_string(), "Bitcoin".to_string(), 8)
+                .is_ok()
+        );
+
+        // 異常系：精密度の最大値(8)を超える場合はエラーとなることを確認
+        let res = book.create_unit(
+            "LONG".to_string(),
+            "L".to_string(),
+            "Too long".to_string(),
+            9,
+        );
         assert!(matches!(res, Err(DomainError::InvalidUnitPrecision)));
 
         // 異常系：コードや名称が空の場合はエラーとなることを確認

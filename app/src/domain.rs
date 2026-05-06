@@ -45,7 +45,7 @@ pub enum DomainError {
     UnitNameExists,
     #[error("the specified unit is not owned by the book")]
     NotOwnedUnit,
-    #[error("Precision must be zero or positive")]
+    #[error("Precision must be between 0 and 8")]
     InvalidUnitPrecision,
     #[error("取引が見つかりません")]
     TransactionNotFound,
