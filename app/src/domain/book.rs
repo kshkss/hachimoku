@@ -1,4 +1,4 @@
-use crate::domain::{BookId, BookSlug, CabinetId, CabinetName, CabinetType, UnitId, Result, DomainError, Entity, AccountId, CategoryId, Relation};
+use crate::domain::{BookId, BookSlug, CabinetId, CabinetName, CabinetType, UnitId, Result, DomainError, Entity};
 use crate::domain::cabinet::Cabinet;
 use async_trait::async_trait;
 use uuid::Uuid;

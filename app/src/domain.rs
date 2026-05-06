@@ -5,6 +5,13 @@ pub mod category;
 pub mod transaction;
 pub mod unit;
 
+pub use account::{Account, AccountRepository};
+pub use book::{Book, BookRepository};
+pub use cabinet::{Cabinet, CabinetRepository};
+pub use category::{Category, CategoryUpdater};
+pub use transaction::{Entry, Journal, Transaction, TransactionParam, TransactionRepository};
+pub use unit::{Unit, UnitRepository};
+
 use regex::Regex;
 use std::fmt;
 use std::str::FromStr;
