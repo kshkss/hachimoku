@@ -1,4 +1,4 @@
-use crate::domain::{BookId, BookSlug, CabinetId, CabinetName, CabinetType, UnitId, Result, DomainError, HasId, AccountId, CategoryId, Relation};
+use crate::domain::{BookId, BookSlug, CabinetId, CabinetName, CabinetType, UnitId, Result, DomainError, Entity, AccountId, CategoryId, Relation};
 use crate::domain::cabinet::Cabinet;
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ pub struct Book {
     pub(super) cabinet: CabinetId,
 }
 
-impl HasId for Book {
+impl Entity for Book {
     type Id = BookId;
     fn id(&self) -> Self::Id {
         self.id
@@ -20,10 +20,6 @@ impl HasId for Book {
 }
 
 impl Book {
-    pub fn has_id(&self, id: BookId) -> bool {
-        self.id == id
-    }
-
     pub fn reconstruct(id: BookId, slug: BookSlug, base_unit: UnitId, name: String, cabinet: CabinetId) -> Result<Self> {
         Ok(Self { id, slug, base_unit, name, cabinet })
     }
@@ -50,8 +46,6 @@ impl Cabinet {
 
 #[async_trait]
 pub trait BookRepository: Send + Sync {
-    async fn get_book_by_slug(&self, cabinet: &CabinetName, slug: &BookSlug) -> Result<Book>;
-    async fn get_book_by_id(&self, book: BookId) -> Result<Book>;
+    async fn get_book(&self, book: BookId) -> Result<Book>;
     async fn save_book(&self, book: &Book) -> Result<()>;
-    async fn get_books(&self, cabinet: CabinetId) -> Result<Vec<Book>>;
 }

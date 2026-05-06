@@ -1,4 +1,4 @@
-use crate::domain::{UnitId, BookId, Result, DomainError, HasId};
+use crate::domain::{UnitId, BookId, Result, DomainError, Entity};
 use crate::domain::book::Book;
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -13,7 +13,7 @@ pub struct Unit {
     pub(super) book: BookId,
 }
 
-impl HasId for Unit {
+impl Entity for Unit {
     type Id = UnitId;
     fn id(&self) -> Self::Id {
         self.id
@@ -21,10 +21,6 @@ impl HasId for Unit {
 }
 
 impl Unit {
-    pub fn has_id(&self, id: UnitId) -> bool {
-        self.id == id
-    }
-
     pub fn reconstruct(id: UnitId, code: String, symbol: String, name: String, precision: i32, book: BookId) -> Result<Self> {
         Ok(Self { id, code, symbol, name, precision, book })
     }
@@ -38,7 +34,7 @@ impl Book {
         if code.is_empty() || name.is_empty() {
              return Err(DomainError::System);
         }
-        use crate::domain::HasId;
+        use crate::domain::Entity;
         Ok(Unit {
             id: UnitId::new(Uuid::now_v7()),
             code,
@@ -52,6 +48,6 @@ impl Book {
 
 #[async_trait]
 pub trait UnitRepository: Send + Sync {
-    async fn get_units(&self, book: BookId) -> Result<Vec<Unit>>;
+    async fn get_unit(&self, book: UnitId) -> Result<Vec<Unit>>;
     async fn save_unit(&self, unit: &Unit) -> Result<()>;
 }

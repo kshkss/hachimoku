@@ -1,4 +1,4 @@
-use crate::domain::{AccountId, CategoryId, UnitId, BookId, Result, DomainError, HasId, Relation};
+use crate::domain::{AccountId, CategoryId, UnitId, BookId, Result, DomainError, Entity, Relation};
 use crate::domain::book::Book;
 use crate::domain::category::Category;
 use async_trait::async_trait;
@@ -13,7 +13,7 @@ pub struct Account {
     pub(super) book: BookId,
 }
 
-impl HasId for Account {
+impl Entity for Account {
     type Id = AccountId;
     fn id(&self) -> Self::Id {
         self.id
@@ -21,10 +21,6 @@ impl HasId for Account {
 }
 
 impl Account {
-    pub fn has_id(&self, id: AccountId) -> bool {
-        self.id == id
-    }
-
     pub fn reconstruct(
         id: AccountId,
         name: String,
@@ -44,7 +40,7 @@ impl Book {
         if name.is_empty() || category_id.as_str().is_empty() || unit_id.as_uuid().is_nil() {
              return Err(DomainError::System);
         }
-        use crate::domain::HasId;
+        use crate::domain::Entity;
         Ok(Account {
             id: AccountId::new(Uuid::now_v7()),
             name,
@@ -57,8 +53,6 @@ impl Book {
 
 #[async_trait]
 pub trait AccountRepository: Send + Sync {
-    async fn get_account_by_id(&self, account: AccountId) -> Result<Account>;
-    async fn get_accounts(&self, book: BookId) -> Result<Vec<Account>>;
-    async fn get_accounts_of_category(&self, book: BookId, category: CategoryId) -> Result<Vec<AccountId>>;
+    async fn get_account(&self, id: AccountId) -> Result<Account>;
     async fn save_account(&self, account: &Account) -> Result<()>;
 }

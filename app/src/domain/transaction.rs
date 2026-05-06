@@ -1,11 +1,14 @@
-use crate::domain::{TransactionId, EntryId, BookId, AccountId, UnitId, Amount, Result, DomainError, HasId, Relation, MajorCategory};
 use crate::domain::account::Account;
-use crate::domain::unit::Unit;
 use crate::domain::book::Book;
+use crate::domain::unit::Unit;
+use crate::domain::{
+    AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, Relation, Result,
+    TransactionId, UnitId,
+};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use uuid::{Uuid, Timestamp, NoContext};
 use std::collections::HashMap;
+use uuid::{NoContext, Timestamp, Uuid};
 
 #[derive(Debug)]
 pub struct Journal {
@@ -51,10 +54,14 @@ fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
     Uuid::new_v7(ts)
 }
 
-impl Entry {
-    pub fn has_id(&self, id: EntryId) -> bool {
-        self.id == id
+impl Entity for Entry {
+    type Id = EntryId;
+    fn id(&self) -> Self::Id {
+        self.id
     }
+}
+
+impl Entry {
 
     pub fn reconstruct(
         id: EntryId,
@@ -66,7 +73,16 @@ impl Entry {
         is_protected: bool,
         provider_id: Option<String>,
     ) -> Result<Self> {
-        Ok(Self { id, date, note, amount, unit, account, is_protected, provider_id })
+        Ok(Self {
+            id,
+            date,
+            note,
+            amount,
+            unit,
+            account,
+            is_protected,
+            provider_id,
+        })
     }
 
     pub fn is_date_match(&self, date: DateTime<Utc>) -> bool {
@@ -89,10 +105,14 @@ impl Entry {
     }
 }
 
-impl Transaction {
-    pub fn has_id(&self, id: TransactionId) -> bool {
-        self.id == id
+impl Entity for Transaction {
+    type Id = TransactionId;
+    fn id(&self) -> Self::Id {
+        self.id
     }
+}
+
+impl Transaction {
 
     pub fn reconstruct(
         id: TransactionId,
@@ -102,7 +122,14 @@ impl Transaction {
         book: BookId,
         is_deleted: bool,
     ) -> Result<Self> {
-        Ok(Self { id, date, note, entries, book, is_deleted })
+        Ok(Self {
+            id,
+            date,
+            note,
+            entries,
+            book,
+            is_deleted,
+        })
     }
 
     pub fn validate(&self) -> Result<()> {
@@ -193,7 +220,12 @@ impl Journal {
         Ok(())
     }
 
-    pub fn create_transaction(&mut self, date: DateTime<Utc>, note: String, entries: Vec<Entry>) -> Result<TransactionId> {
+    pub fn create_transaction(
+        &mut self,
+        date: DateTime<Utc>,
+        note: String,
+        entries: Vec<Entry>,
+    ) -> Result<TransactionId> {
         if note.is_empty() {
             return Err(DomainError::InvalidTransactionOperation);
         }
@@ -211,9 +243,18 @@ impl Journal {
         Ok(id)
     }
 
-    pub fn update(&mut self, txid: TransactionId, date: DateTime<Utc>, note: String) -> Result<TransactionId> {
-        let idx = self.transactions.iter().position(|t| t.has_id(txid)).ok_or(DomainError::InvalidTransactionOperation)?;
-        
+    pub fn update(
+        &mut self,
+        txid: TransactionId,
+        date: DateTime<Utc>,
+        note: String,
+    ) -> Result<TransactionId> {
+        let idx = self
+            .transactions
+            .iter()
+            .position(|t| t.has_id(txid))
+            .ok_or(DomainError::InvalidTransactionOperation)?;
+
         if self.transactions[idx].is_deleted() || note.is_empty() {
             return Err(DomainError::InvalidTransactionOperation);
         }
@@ -230,21 +271,30 @@ impl Journal {
         };
         new_tx.append(&mut old_tx);
         new_tx.validate()?;
-        
+
         old_tx.is_deleted = true;
         self.transactions.push(new_tx);
-        
+
         Ok(id)
     }
 
-    pub fn merge(&mut self, date: DateTime<Utc>, note: String, transaction_ids: Vec<TransactionId>) -> Result<TransactionId> {
+    pub fn merge(
+        &mut self,
+        date: DateTime<Utc>,
+        note: String,
+        transaction_ids: Vec<TransactionId>,
+    ) -> Result<TransactionId> {
         if transaction_ids.len() < 2 || note.is_empty() {
             return Err(DomainError::InvalidTransactionOperation);
         }
 
         let mut indices = Vec::new();
         for tid in &transaction_ids {
-            let idx = self.transactions.iter().position(|t| t.has_id(*tid)).ok_or(DomainError::InvalidTransactionOperation)?;
+            let idx = self
+                .transactions
+                .iter()
+                .position(|t| t.has_id(*tid))
+                .ok_or(DomainError::InvalidTransactionOperation)?;
             if self.transactions[idx].is_deleted {
                 return Err(DomainError::InvalidTransactionOperation);
             }
@@ -275,11 +325,19 @@ impl Journal {
         Ok(id)
     }
 
-    pub fn divide(&mut self, source: TransactionId, params: Vec<TransactionParam>) -> Result<Vec<TransactionId>> {
+    pub fn divide(
+        &mut self,
+        source: TransactionId,
+        params: Vec<TransactionParam>,
+    ) -> Result<Vec<TransactionId>> {
         if params.len() < 2 {
             return Err(DomainError::InvalidTransactionOperation);
         }
-        let idx = self.transactions.iter().position(|t| t.has_id(source)).ok_or(DomainError::InvalidTransactionOperation)?;
+        let idx = self
+            .transactions
+            .iter()
+            .position(|t| t.has_id(source))
+            .ok_or(DomainError::InvalidTransactionOperation)?;
         if self.transactions[idx].is_deleted() {
             return Err(DomainError::InvalidTransactionOperation);
         }
@@ -302,7 +360,10 @@ impl Journal {
                 is_deleted: false,
             };
             for eid in p.entries {
-                let e_idx = source_tx.iter().position(|e| e.has_id(eid)).ok_or(DomainError::InvalidTransactionOperation)?;
+                let e_idx = source_tx
+                    .iter()
+                    .position(|e| e.has_id(eid))
+                    .ok_or(DomainError::InvalidTransactionOperation)?;
                 let entry = source_tx.remove(e_idx);
                 tx.push_entry(entry);
             }
@@ -321,9 +382,18 @@ impl Journal {
         Ok(result_ids)
     }
 
-    pub fn update_entries(&mut self, source: TransactionId, reuse: Vec<EntryId>, created: Vec<Entry>) -> Result<TransactionId> {
-        let idx = self.transactions.iter().position(|t| t.has_id(source)).ok_or(DomainError::InvalidTransactionOperation)?;
-        
+    pub fn update_entries(
+        &mut self,
+        source: TransactionId,
+        reuse: Vec<EntryId>,
+        created: Vec<Entry>,
+    ) -> Result<TransactionId> {
+        let idx = self
+            .transactions
+            .iter()
+            .position(|t| t.has_id(source))
+            .ok_or(DomainError::InvalidTransactionOperation)?;
+
         if self.transactions[idx].is_deleted() {
             return Err(DomainError::InvalidTransactionOperation);
         }
@@ -341,7 +411,10 @@ impl Journal {
 
         // Reuse entries
         for eid in reuse {
-            let e_idx = source_tx.iter().position(|e| e.has_id(eid)).ok_or(DomainError::InvalidTransactionOperation)?;
+            let e_idx = source_tx
+                .iter()
+                .position(|e| e.has_id(eid))
+                .ok_or(DomainError::InvalidTransactionOperation)?;
             new_tx.push_entry(source_tx.remove(e_idx));
         }
 
@@ -370,7 +443,7 @@ impl Account {
                 Relation::Loaded(c) => c,
                 Relation::Unloaded(_) => return Err(DomainError::System),
             };
-            use crate::domain::HasId;
+            use crate::domain::Entity;
             (cat.major(), self.id())
         };
 
@@ -397,7 +470,7 @@ impl Account {
 
 impl Book {
     pub fn create_journal(&self) -> Journal {
-        use crate::domain::HasId;
+        use crate::domain::Entity;
         Journal {
             transactions: Vec::with_capacity(2),
             book: self.id(),
@@ -407,6 +480,6 @@ impl Book {
 
 #[async_trait]
 pub trait TransactionRepository: Send + Sync {
-    async fn get_transactions(&self, transaction_ids: Vec<TransactionId>) -> Result<Journal>;
+    async fn get_transactions(&self, transaction_ids: &[TransactionId]) -> Result<Journal>;
     async fn update_transactions(&self, journal: &Journal) -> Result<()>;
 }

@@ -1,4 +1,5 @@
-use crate::domain::{CabinetId, CabinetName, CabinetType, Result, DomainError, HasId};
+use crate::domain::{CabinetId, CabinetName, CabinetType, Result, DomainError, Entity};
+use crate::domain::book::Book;
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -9,7 +10,7 @@ pub struct Cabinet {
     pub(super) cabinet_type: CabinetType,
 }
 
-impl HasId for Cabinet {
+impl Entity for Cabinet {
     type Id = CabinetId;
     fn id(&self) -> Self::Id {
         self.id
@@ -17,10 +18,6 @@ impl HasId for Cabinet {
 }
 
 impl Cabinet {
-    pub fn has_id(&self, id: CabinetId) -> bool {
-        self.id == id
-    }
-
     pub fn new(id: CabinetId, name: CabinetName) -> Result<Self> {
         if id.as_uuid().is_nil() {
             return Err(DomainError::System);

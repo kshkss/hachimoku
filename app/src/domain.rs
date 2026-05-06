@@ -146,10 +146,10 @@ pub enum Relation<I, T> {
 }
 
 impl<I, T> Relation<I, T> {
-    pub fn id(&self) -> I
-    where
+    pub fn id(&self) -> I 
+    where 
         I: Clone,
-        T: HasId<Id = I>,
+        T: Entity<Id = I>
     {
         match self {
             Relation::Unloaded(id) => id.clone(),
@@ -165,9 +165,12 @@ impl<I, T> Relation<I, T> {
     }
 }
 
-pub trait HasId {
-    type Id;
+pub trait Entity {
+    type Id: PartialEq;
     fn id(&self) -> Self::Id;
+    fn has_id(&self, id: Self::Id) -> bool {
+        self.id() == id
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
