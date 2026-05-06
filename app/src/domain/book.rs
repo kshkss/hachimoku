@@ -60,7 +60,7 @@ impl Cabinet {
             slug,
             base_unit,
             name,
-            cabinet: self.id,
+            cabinet: self.id(),
         })
     }
 }
