@@ -295,12 +295,25 @@ pub struct Amount {
 
 impl Amount {
     /// 新しい Amount を作成します。金額が0の場合はエラーを返します。
-    // FIXME: コンストラクタをdebit(u32)とcredit(u32)に分割。値の上限をi32::MAXに制限。
-    pub fn new(value: i32, unit: UnitId) -> Result<Self> {
-        if value == 0 {
+    pub fn new_debit(amount: u32, unit: UnitId) -> Result<Self> {
+        if amount == 0 || amount > i32::MAX as u32 {
             return Err(DomainError::InvalidEntry);
         }
-        Ok(Self { value, unit })
+        Ok(Self {
+            value: amount as i32,
+            unit,
+        })
+    }
+
+    /// 新しい Amount を作成します。金額が0の場合はエラーを返します。
+    pub fn new_credit(amount: u32, unit: UnitId) -> Result<Self> {
+        if amount == 0 || amount > i32::MAX as u32 {
+            return Err(DomainError::InvalidEntry);
+        }
+        Ok(Self {
+            value: -(amount as i32),
+            unit,
+        })
     }
 
     /// インフラ層などで既存のデータから Amount を復元します。
