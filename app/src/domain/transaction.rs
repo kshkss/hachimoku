@@ -261,6 +261,12 @@ impl Journal {
     /// インフラ層などで既存のデータから Journal を復元します。
     /// 復元時に、各取引の所属帳簿 ID が一致しているか、および各取引が独立して妥当（`Transaction::validate`）かを検証します。
     pub fn reconstruct(transactions: Vec<Transaction>, book: BookId) -> Result<Self> {
+        for tx in &transactions {
+            if tx.book != book {
+                return Err(DomainError::System);
+            }
+            tx.validate()?;
+        }
         Ok(Self { transactions, book })
     }
 
