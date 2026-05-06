@@ -88,7 +88,10 @@ impl Entry {
         note: String,
         provider_id: String,
     ) -> Result<Self> {
-        if note.is_empty() {
+        if self.is_protected {
+            return Err(DomainError::InvalidEntry);
+        }
+        if note.is_empty() || provider_id.is_empty() {
             Err(DomainError::InvalidEntry)
         } else {
             Ok(Self {
