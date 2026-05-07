@@ -2,8 +2,8 @@ use crate::domain::account::Account;
 use crate::domain::book::Book;
 use crate::domain::unit::Unit;
 use crate::domain::{
-    AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, Relation, Result,
-    TransactionId, UnitId,
+    AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, RawInt, RawUint,
+    Relation, Result, TransactionId, UnitId,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -13,8 +13,8 @@ use uuid::{NoContext, Timestamp, Uuid};
 /// Journal は帳簿内の取引（Transaction）の集合を管理する集約ルートです。
 #[derive(Debug)]
 pub struct Journal {
-    transactions: Vec<Transaction>,
-    book: BookId,
+    pub(super) transactions: Vec<Transaction>,
+    pub(super) book: BookId,
 }
 
 /// TransactionParam は取引を分割する際などに使用されるパラメータです。
@@ -28,28 +28,28 @@ pub struct TransactionParam {
 /// Transaction は一回分の会計取引を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Transaction {
-    id: TransactionId,
-    date: DateTime<Utc>,
-    note: String,
-    entries: Vec<Entry>,
-    book: BookId,
-    is_deleted: bool,
+    pub(super) id: TransactionId,
+    pub(super) date: DateTime<Utc>,
+    pub(super) note: String,
+    pub(super) entries: Vec<Entry>,
+    pub(super) book: BookId,
+    pub(super) is_deleted: bool,
 }
 
 /// Entry は取引を構成する各勘定科目への記帳（エントリー）を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Entry {
-    id: EntryId,
+    pub(super) id: EntryId,
     /// Date は Entry が保護されるときにセットされます。保護されていない場合は None です。
-    date: Option<DateTime<Utc>>,
-    note: String,
-    amount: Amount,
+    pub(super) date: Option<DateTime<Utc>>,
+    pub(super) note: String,
+    pub(super) amount: Amount,
     /// Unit は記帳に使用される単位です。
-    unit: Relation<UnitId, Unit>,
+    pub(super) unit: Relation<UnitId, Unit>,
     /// Account は記帳対象の勘定科目です。
-    account: Relation<AccountId, Account>,
-    is_protected: bool,
-    provider_id: Option<String>,
+    pub(super) account: Relation<AccountId, Account>,
+    pub(super) is_protected: bool,
+    pub(super) provider_id: Option<String>,
 }
 
 fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
@@ -655,7 +655,7 @@ pub trait TransactionRepository: Send + Sync {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{BookSlug, Cabinet, CabinetName, Category, CategoryId, UnitId};
+    use crate::domain::{BookSlug, Cabinet, CabinetId, CabinetName, Category, CategoryId, UnitId};
     use uuid::Uuid;
 
     fn setup_book() -> (Book, UnitId) {
@@ -700,7 +700,7 @@ mod tests {
             .create_entry(
                 date,
                 "Note".to_string(),
-                Amount::new_debit(100, unit).unwrap(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
 
@@ -729,13 +729,13 @@ mod tests {
         let date = Utc::now();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
 
@@ -753,7 +753,7 @@ mod tests {
 
         // 異常系：貸借が一致しなくなった取引がバリデーションエラー（InvalidTransactionOperation）になることを確認
         let e3 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(10, unit).unwrap())
+            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(10), unit).unwrap())
             .unwrap();
         tx.push_entry(e3);
         assert!(matches!(
@@ -770,13 +770,13 @@ mod tests {
         let mut journal = book.create_journal();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
 
@@ -824,12 +824,12 @@ mod tests {
                 date,
                 "T1".to_string(),
                 vec![
-                    acc.create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
                         .unwrap(),
                     acc.create_entry(
                         date,
                         "C".to_string(),
-                        Amount::new_credit(100, unit).unwrap(),
+                        Amount::new_credit(RawUint(100), unit).unwrap(),
                     )
                     .unwrap(),
                 ],
@@ -841,9 +841,9 @@ mod tests {
                 date,
                 "T2".to_string(),
                 vec![
-                    acc.create_entry(date, "D".to_string(), Amount::new_debit(50, unit).unwrap())
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(RawUint(50), unit).unwrap())
                         .unwrap(),
-                    acc.create_entry(date, "C".to_string(), Amount::new_credit(50, unit).unwrap())
+                    acc.create_entry(date, "C".to_string(), Amount::new_credit(RawUint(50), unit).unwrap())
                         .unwrap(),
                 ],
             )
@@ -891,7 +891,7 @@ mod tests {
             .create_entry(
                 date,
                 "D1".to_string(),
-                Amount::new_debit(100, unit).unwrap(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
         let e1_id = e1.id();
@@ -899,19 +899,19 @@ mod tests {
             .create_entry(
                 date,
                 "C1".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
         let e2_id = e2.id();
         let e3 = acc
-            .create_entry(date, "D2".to_string(), Amount::new_debit(50, unit).unwrap())
+            .create_entry(date, "D2".to_string(), Amount::new_debit(RawUint(50), unit).unwrap())
             .unwrap();
         let e3_id = e3.id();
         let e4 = acc
             .create_entry(
                 date,
                 "C2".to_string(),
-                Amount::new_credit(50, unit).unwrap(),
+                Amount::new_credit(RawUint(50), unit).unwrap(),
             )
             .unwrap();
         let e4_id = e4.id();
@@ -976,7 +976,7 @@ mod tests {
             .create_entry(
                 date,
                 "Reuse".to_string(),
-                Amount::new_debit(100, unit).unwrap(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
         let e1_id = e1.id();
@@ -984,7 +984,7 @@ mod tests {
             .create_entry(
                 date,
                 "Delete".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
 
@@ -997,7 +997,7 @@ mod tests {
             .create_entry(
                 date,
                 "New".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
 
@@ -1030,13 +1030,13 @@ mod tests {
         let date = Utc::now();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(100, unit).unwrap(),
+                Amount::new_credit(RawUint(100), unit).unwrap(),
             )
             .unwrap();
         let e1_protected = e1

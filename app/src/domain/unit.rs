@@ -66,7 +66,7 @@ impl Book {
         name: String,
         precision: u8,
     ) -> Result<Unit> {
-        if precision > 8 {
+        if precision > crate::domain::MAX_PRECISION {
             return Err(DomainError::InvalidUnitPrecision);
         }
         if code.is_empty() || name.is_empty() {
