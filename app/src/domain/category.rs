@@ -1,5 +1,51 @@
-use crate::domain::{CategoryId, Entity, MajorCategory, Result};
+use crate::domain::{CategoryId, DomainError, Entity, Result};
 use async_trait::async_trait;
+use std::str::FromStr;
+
+/// MajorCategory は勘定科目の大分類を表します。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MajorCategory {
+    /// 資産
+    Asset,
+    /// 負債
+    Liability,
+    /// 純資産（資本）
+    Equity,
+    /// 収益
+    Income,
+    /// 費用
+    Expense,
+}
+
+impl MajorCategory {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Asset => "asset",
+            Self::Liability => "liability",
+            Self::Equity => "equity",
+            Self::Income => "income",
+            Self::Expense => "expense",
+        }
+    }
+}
+
+impl FromStr for MajorCategory {
+    type Err = DomainError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "asset" => Ok(Self::Asset),
+            "liability" => Ok(Self::Liability),
+            "equity" => Ok(Self::Equity),
+            "income" => Ok(Self::Income),
+            "expense" => Ok(Self::Expense),
+            _ => Err(DomainError::System),
+        }
+    }
+}
+
+/// 未分類のカテゴリー ID 定数です。
+pub const CATEGORY_UNCLASSIFIED: &str = "eq_unclassified";
 
 /// Category は勘定科目のカテゴリーを表すドメインエンティティです。
 #[derive(Debug)]
