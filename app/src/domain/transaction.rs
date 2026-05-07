@@ -110,8 +110,8 @@ impl Entry {
         date: Option<DateTime<Utc>>,
         note: String,
         amount: Amount,
-        unit: Relation<UnitId, Unit>,
-        account: Relation<AccountId, Account>,
+        unit: Unit,
+        account: Account,
         is_protected: bool,
         provider_id: Option<String>,
     ) -> Result<Self> {
@@ -120,8 +120,8 @@ impl Entry {
             date,
             note,
             amount,
-            unit,
-            account,
+            unit: Relation::Loaded(unit),
+            account: Relation::Loaded(account),
             is_protected,
             provider_id,
         })
@@ -683,7 +683,7 @@ mod tests {
         Account::reconstruct(
             AccountId::new(Uuid::now_v7()),
             "Acc".to_string(),
-            Relation::Loaded(cat),
+            cat,
             unit,
             book.id(),
             true,

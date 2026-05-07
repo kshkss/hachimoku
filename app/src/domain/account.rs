@@ -30,7 +30,7 @@ impl Account {
     pub fn reconstruct(
         id: AccountId,
         name: String,
-        category: Relation<CategoryId, Category>,
+        category: Category,
         unit: UnitId,
         book: BookId,
         is_active: bool,
@@ -38,7 +38,7 @@ impl Account {
         Ok(Self {
             id,
             name,
-            category,
+            category: Relation::Loaded(category),
             unit,
             book,
             is_active,
@@ -130,18 +130,18 @@ mod tests {
     fn test_account_reconstruct() {
         let id = AccountId::new(Uuid::now_v7());
         let cat_id = CategoryId::new("cat".to_string());
-        let unit_id = UnitId::new(Uuid::now_v7());
-        let book_id = BookId::new(Uuid::now_v7());
-        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
-        let account = Account::reconstruct(
-            id,
-            "Account".to_string(),
-            Relation::Unloaded(cat_id),
-            unit_id,
-            book_id,
+        let cat = Category::reconstruct(
+            cat_id.clone(),
+            crate::domain::MajorCategory::Asset,
+            "Minor".to_string(),
             true,
         )
         .unwrap();
+        let unit_id = UnitId::new(Uuid::now_v7());
+        let book_id = BookId::new(Uuid::now_v7());
+        // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
+        let account =
+            Account::reconstruct(id, "Account".to_string(), cat, unit_id, book_id, true).unwrap();
         assert!(account.has_id(id));
         assert!(account.is_active());
     }
