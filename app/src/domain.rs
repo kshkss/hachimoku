@@ -183,8 +183,3 @@ pub trait Entity {
         self.id() == id
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-}
