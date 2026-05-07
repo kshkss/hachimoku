@@ -3,6 +3,119 @@ use crate::domain::{BookId, DomainError, Entity, Result, UnitId};
 use async_trait::async_trait;
 use uuid::Uuid;
 
+pub const MAX_PRECISION: u8 = 8;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RawInt(pub i32);
+
+impl RawInt {
+    pub const MAX: Self = Self(i32::MAX);
+    pub fn as_int(&self) -> i32 {
+        self.0
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RawUint(pub u32);
+
+impl RawUint {
+    pub const MAX: Self = Self(i32::MAX as u32);
+    pub fn as_uint(&self) -> u32 {
+        self.0
+    }
+}
+
+pub const MAX_RAW_INT: RawInt = RawInt::MAX;
+pub const MAX_RAW_UINT: RawUint = RawUint::MAX;
+
+/// Amount は取引の金額と単位を保持する値オブジェクトです。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Amount {
+    value: RawInt,
+    unit: UnitId,
+}
+
+impl Amount {
+    /// 新しい Amount を作成します。金額が0の場合はエラーを返します。
+    pub fn new_debit(amount: RawUint, unit: UnitId) -> Result<Self> {
+        if amount.as_uint() == 0 || amount > MAX_RAW_UINT {
+            return Err(DomainError::InvalidEntry);
+        }
+        Ok(Self {
+            value: RawInt(amount.as_uint() as i32),
+            unit,
+        })
+    }
+
+    /// 新しい Amount を作成します。金額が0の場合はエラーを返します。
+    pub fn new_credit(amount: RawUint, unit: UnitId) -> Result<Self> {
+        if amount.as_uint() == 0 || amount > MAX_RAW_UINT {
+            return Err(DomainError::InvalidEntry);
+        }
+        Ok(Self {
+            value: RawInt(-(amount.as_uint() as i32)),
+            unit,
+        })
+    }
+
+    /// インフラ層などで既存のデータから Amount を復元します。
+    pub fn reconstruct(debit: RawUint, credit: RawUint, unit: UnitId) -> Result<Self> {
+        if debit > MAX_RAW_UINT || credit > MAX_RAW_UINT {
+            Err(DomainError::System)
+        } else {
+            let value = RawInt(debit.as_uint() as i32 - credit.as_uint() as i32);
+            Ok(Self { value, unit })
+        }
+    }
+
+    /// 単位の ID を返します。
+    pub fn unit(&self) -> UnitId {
+        self.unit
+    }
+
+    /// 借方の金額（正の値）を返します。
+    pub fn debit(&self) -> RawUint {
+        RawUint(self.value.as_int().max(0) as u32)
+    }
+
+    /// 貸方の金額（正の値）を返します。
+    pub fn credit(&self) -> RawUint {
+        RawUint((-self.value.as_int()).max(0) as u32)
+    }
+
+    /// 金額の符号を反転させた Amount を返します。
+    pub fn neg(&self) -> Self {
+        Self {
+            value: RawInt(-self.value.as_int()),
+            unit: self.unit,
+        }
+    }
+
+    /// 金額がバランスしている（0である）かどうかを返します。
+    pub fn is_balanced(&self) -> bool {
+        self.value.as_int() == 0
+    }
+
+    /// 金額がバランスしている（0である）かどうかを返します。
+    pub fn is_zero(&self) -> bool {
+        self.value.as_int() == 0
+    }
+}
+
+impl std::ops::Add for Amount {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        if self.unit != other.unit {
+            panic!("cannot add amounts with different units");
+        }
+        Self {
+            value: RawInt(self.value.as_int() + other.value.as_int()),
+            unit: self.unit,
+        }
+    }
+}
+
 /// Unit は取引で使用される単位（通貨など）を表すドメインエンティティです。
 #[derive(Debug)]
 pub struct Unit {
@@ -36,7 +149,7 @@ impl Unit {
         book: BookId,
         is_active: bool,
     ) -> Result<Self> {
-        if precision > 8 {
+        if precision > crate::domain::MAX_PRECISION {
             Err(DomainError::InvalidUnitPrecision)
         } else {
             Ok(Self {
@@ -160,5 +273,49 @@ mod tests {
         .unwrap();
         assert!(unit.has_id(id));
         assert!(unit.is_active());
+    }
+
+    #[test]
+    fn test_amount_operations() {
+        let unit = UnitId::new(Uuid::now_v7());
+
+        // 正常系：借方(debit)と貸方(credit)の生成と値の整合性
+        let d = Amount::new_debit(RawUint(100), unit).unwrap();
+        assert_eq!(d.debit().as_uint(), 100);
+        assert_eq!(d.credit().as_uint(), 0);
+
+        let c = Amount::new_credit(RawUint(50), unit).unwrap();
+        assert_eq!(c.debit().as_uint(), 0);
+        assert_eq!(c.credit().as_uint(), 50);
+
+        // 正常系：インフラ層を想定した復元（reconstruct）とバランス判定
+        let r = Amount::reconstruct(RawUint(100), RawUint(150), unit).unwrap();
+        assert_eq!(r.debit().as_uint(), 0);
+        assert_eq!(r.credit().as_uint(), 50);
+        assert_eq!(r.is_balanced(), false);
+
+        // 正常系：符号反転（neg）
+        let n = d.neg();
+        assert_eq!(n.credit().as_uint(), 100);
+
+        // 正常系：金額の加算（バランスの推移）
+        let sum = d + c;
+        assert_eq!(sum.debit().as_uint(), 50);
+        assert_eq!(sum.credit().as_uint(), 0);
+
+        let balanced = d + d.neg();
+        assert!(balanced.is_balanced());
+        assert!(balanced.is_zero());
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot add amounts with different units")]
+    fn test_amount_add_different_units_panic() {
+        // 異常系：異なる単位間での加算は panic! することを確認
+        let u1 = UnitId::new(Uuid::now_v7());
+        let u2 = UnitId::new(Uuid::now_v7());
+        let a1 = Amount::new_debit(RawUint(100), u1).unwrap();
+        let a2 = Amount::new_debit(RawUint(100), u2).unwrap();
+        let _ = a1 + a2;
     }
 }
