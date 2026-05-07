@@ -1,9 +1,38 @@
 use crate::domain::cabinet::Cabinet;
-use crate::domain::{
-    BookId, BookSlug, CabinetId, CabinetType, DomainError, Entity, Result, UnitId,
-};
+use crate::domain::{BookId, CabinetId, DomainError, Entity, Result, UnitId};
 use async_trait::async_trait;
+use regex::Regex;
+use std::fmt;
+use std::sync::LazyLock;
 use uuid::Uuid;
+
+static SLUG_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
+
+/// BookSlug は帳簿を識別するためのユーザーごとに一意なスラッグです。
+/// 3文字以上20字以下の英数字とハイフンのみを許容します。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BookSlug(String);
+
+impl BookSlug {
+    pub fn new(slug: String) -> Result<Self> {
+        if SLUG_PATTERN.is_match(&slug) && slug.len() > 2 && slug.len() <= 20 {
+            Ok(Self(slug))
+        } else {
+            Err(DomainError::InvalidBookSlug)
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for BookSlug {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// Book は一冊の帳簿を表すドメインエンティティです。
 #[derive(Debug)]
@@ -109,5 +138,19 @@ mod tests {
         // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
         let book = Book::reconstruct(id, slug, unit, "Name".to_string(), cab_id).unwrap();
         assert!(book.has_id(id));
+    }
+
+    #[test]
+    fn test_book_slug_validation() {
+        // 正常系：許可される形式
+        assert!(BookSlug::new("my-book".to_string()).is_ok());
+        assert!(BookSlug::new("slug123".to_string()).is_ok());
+
+        // 異常系：短すぎる（3文字未満）
+        assert!(BookSlug::new("ab".to_string()).is_err());
+        // 異常系：長すぎる
+        assert!(BookSlug::new("a".repeat(21)).is_err());
+        // 異常系：不正な文字
+        assert!(BookSlug::new("MyBook".to_string()).is_err());
     }
 }
