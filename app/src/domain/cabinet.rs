@@ -1,6 +1,46 @@
-use crate::domain::{CabinetId, CabinetName, CabinetType, DomainError, Entity, Result};
+use crate::domain::{CabinetId, DomainError, Entity, Result};
 use async_trait::async_trait;
+use regex::Regex;
+use std::fmt;
+use std::sync::LazyLock;
 use uuid::Uuid;
+
+/// CabinetType はキャビネットの種類を表します。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CabinetType {
+    /// 自身が所有するキャビネット
+    Owned,
+    /// 他者から共有されたキャビネット
+    Shared,
+}
+
+/// CabinetName はキャビネットの名称を表す値オブジェクトです。
+/// 3文字以上20文字以下の英数字とハイフンのみを許容します。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CabinetName(String);
+
+static NAME_PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
+
+impl CabinetName {
+    pub fn new(name: String) -> Result<Self> {
+        if NAME_PATTERN.is_match(&name) && name.len() >= 3 && name.len() <= 20 {
+            Ok(Self(name))
+        } else {
+            Err(DomainError::System)
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for CabinetName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 /// Cabinet は帳簿（Book）の集まりを管理するエンティティです。
 #[derive(Debug)]
@@ -100,5 +140,26 @@ mod tests {
         let cab = Cabinet::reconstruct(id, name, CabinetType::Owned).unwrap();
         assert_eq!(cab.cabinet_type, CabinetType::Owned);
         assert!(cab.has_id(id));
+    }
+
+    #[test]
+    fn test_cabinet_name_validation() {
+        // 正常系：許可される文字（英数字、ハイフン）と長さ（3-20）
+        assert!(CabinetName::new("my-cabinet".to_string()).is_ok());
+        assert!(CabinetName::new("cab123".to_string()).is_ok());
+        assert!(CabinetName::new("a-b-c".to_string()).is_ok());
+
+        // 異常系：短すぎる
+        assert!(CabinetName::new("ab".to_string()).is_err());
+        // 異常系：長すぎる（21文字）
+        assert!(CabinetName::new("a".repeat(21)).is_err());
+        // 異常系：不正な文字（大文字、アンダースコア、スペース）
+        assert!(CabinetName::new("MyCabinet".to_string()).is_err());
+        assert!(CabinetName::new("my_cabinet".to_string()).is_err());
+        assert!(CabinetName::new("my cabinet".to_string()).is_err());
+        // 異常系：ハイフンの使用法（先頭、末尾、連続）
+        assert!(CabinetName::new("-abc".to_string()).is_err());
+        assert!(CabinetName::new("abc-".to_string()).is_err());
+        assert!(CabinetName::new("abc--def".to_string()).is_err());
     }
 }

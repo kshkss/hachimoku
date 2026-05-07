@@ -7,11 +7,11 @@ pub mod unit;
 
 pub use account::{Account, AccountRepository};
 pub use book::{Book, BookRepository};
-pub use cabinet::{Cabinet, CabinetRepository};
+pub use cabinet::{Cabinet, CabinetName, CabinetRepository, CabinetType};
 pub use category::{Category, CategoryUpdater};
 pub use transaction::{Entry, Journal, Transaction, TransactionParam, TransactionRepository};
 pub use unit::{
-    Amount, RawInt, RawUint, Unit, UnitRepository, MAX_PRECISION, MAX_RAW_INT, MAX_RAW_UINT,
+    Amount, MAX_PRECISION, MAX_RAW_INT, MAX_RAW_UINT, RawInt, RawUint, Unit, UnitRepository,
 };
 
 use regex::Regex;
@@ -64,15 +64,6 @@ pub enum DomainError {
 }
 
 pub type Result<T> = std::result::Result<T, DomainError>;
-
-/// CabinetType はキャビネットの種類を表します。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CabinetType {
-    /// 自身が所有するキャビネット
-    Owned,
-    /// 他者から共有されたキャビネット
-    Shared,
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CabinetId(Uuid);
@@ -238,31 +229,6 @@ impl FromStr for MajorCategory {
 static SLUG_PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[a-z0-9]+(-[a-z0-9]+)*$").unwrap());
 
-/// CabinetName はキャビネットの名称を表す値オブジェクトです。
-/// 3文字以上20文字以下の英数字とハイフンのみを許容します。
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CabinetName(String);
-
-impl CabinetName {
-    pub fn new(name: String) -> Result<Self> {
-        if SLUG_PATTERN.is_match(&name) && name.len() >= 3 && name.len() <= 20 {
-            Ok(Self(name))
-        } else {
-            Err(DomainError::System)
-        }
-    }
-
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl fmt::Display for CabinetName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 /// BookSlug は帳簿を識別するためのユーザーごとに一意なスラッグです。
 /// 3文字以上20字以下の英数字とハイフンのみを許容します。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -295,27 +261,6 @@ pub const CATEGORY_UNCLASSIFIED: &str = "eq_unclassified";
 mod tests {
     use super::*;
     use uuid::Uuid;
-
-    #[test]
-    fn test_cabinet_name_validation() {
-        // 正常系：許可される文字（英数字、ハイフン）と長さ（3-20）
-        assert!(CabinetName::new("my-cabinet".to_string()).is_ok());
-        assert!(CabinetName::new("cab123".to_string()).is_ok());
-        assert!(CabinetName::new("a-b-c".to_string()).is_ok());
-
-        // 異常系：短すぎる
-        assert!(CabinetName::new("ab".to_string()).is_err());
-        // 異常系：長すぎる（21文字）
-        assert!(CabinetName::new("a".repeat(21)).is_err());
-        // 異常系：不正な文字（大文字、アンダースコア、スペース）
-        assert!(CabinetName::new("MyCabinet".to_string()).is_err());
-        assert!(CabinetName::new("my_cabinet".to_string()).is_err());
-        assert!(CabinetName::new("my cabinet".to_string()).is_err());
-        // 異常系：ハイフンの使用法（先頭、末尾、連続）
-        assert!(CabinetName::new("-abc".to_string()).is_err());
-        assert!(CabinetName::new("abc-".to_string()).is_err());
-        assert!(CabinetName::new("abc--def".to_string()).is_err());
-    }
 
     #[test]
     fn test_book_slug_validation() {
