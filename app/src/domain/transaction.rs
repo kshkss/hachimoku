@@ -729,7 +729,11 @@ mod tests {
         let date = Utc::now();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
+            .create_entry(
+                date,
+                "D".to_string(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
+            )
             .unwrap();
         let e2 = acc
             .create_entry(
@@ -753,7 +757,11 @@ mod tests {
 
         // 異常系：貸借が一致しなくなった取引がバリデーションエラー（InvalidTransactionOperation）になることを確認
         let e3 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(10), unit).unwrap())
+            .create_entry(
+                date,
+                "D".to_string(),
+                Amount::new_debit(RawUint(10), unit).unwrap(),
+            )
             .unwrap();
         tx.push_entry(e3);
         assert!(matches!(
@@ -770,7 +778,11 @@ mod tests {
         let mut journal = book.create_journal();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
+            .create_entry(
+                date,
+                "D".to_string(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
+            )
             .unwrap();
         let e2 = acc
             .create_entry(
@@ -824,8 +836,12 @@ mod tests {
                 date,
                 "T1".to_string(),
                 vec![
-                    acc.create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
-                        .unwrap(),
+                    acc.create_entry(
+                        date,
+                        "D".to_string(),
+                        Amount::new_debit(RawUint(100), unit).unwrap(),
+                    )
+                    .unwrap(),
                     acc.create_entry(
                         date,
                         "C".to_string(),
@@ -841,10 +857,18 @@ mod tests {
                 date,
                 "T2".to_string(),
                 vec![
-                    acc.create_entry(date, "D".to_string(), Amount::new_debit(RawUint(50), unit).unwrap())
-                        .unwrap(),
-                    acc.create_entry(date, "C".to_string(), Amount::new_credit(RawUint(50), unit).unwrap())
-                        .unwrap(),
+                    acc.create_entry(
+                        date,
+                        "D".to_string(),
+                        Amount::new_debit(RawUint(50), unit).unwrap(),
+                    )
+                    .unwrap(),
+                    acc.create_entry(
+                        date,
+                        "C".to_string(),
+                        Amount::new_credit(RawUint(50), unit).unwrap(),
+                    )
+                    .unwrap(),
                 ],
             )
             .unwrap();
@@ -904,7 +928,11 @@ mod tests {
             .unwrap();
         let e2_id = e2.id();
         let e3 = acc
-            .create_entry(date, "D2".to_string(), Amount::new_debit(RawUint(50), unit).unwrap())
+            .create_entry(
+                date,
+                "D2".to_string(),
+                Amount::new_debit(RawUint(50), unit).unwrap(),
+            )
             .unwrap();
         let e3_id = e3.id();
         let e4 = acc
@@ -1030,7 +1058,11 @@ mod tests {
         let date = Utc::now();
 
         let e1 = acc
-            .create_entry(date, "D".to_string(), Amount::new_debit(RawUint(100), unit).unwrap())
+            .create_entry(
+                date,
+                "D".to_string(),
+                Amount::new_debit(RawUint(100), unit).unwrap(),
+            )
             .unwrap();
         let e2 = acc
             .create_entry(
