@@ -1,5 +1,5 @@
 use crate::domain::book::Book;
-use crate::domain::{BookId, DomainError, Entity, Result, UnitId};
+use crate::domain::{BookId, DomainError, Entity, Result, RevisionId, UnitId};
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -203,7 +203,7 @@ pub trait UnitRepository: Send + Sync {
     /// 指定された Id の Unit を返します。
     async fn get_unit(&self, unit: UnitId) -> Result<Unit>;
     /// Unit 情報を作成または更新します。
-    async fn save_unit(&self, unit: &Unit) -> Result<()>;
+    async fn save_unit(&self, revision: &dyn RevisionId, unit: &Unit) -> Result<()>;
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ use crate::domain::book::Book;
 use crate::domain::unit::Unit;
 use crate::domain::{
     AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, RawInt, RawUint,
-    Relation, Result, TransactionId, UnitId,
+    Relation, Result, RevisionId, TransactionId, UnitId,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -649,7 +649,8 @@ pub trait TransactionRepository: Send + Sync {
     /// 指定された複数の TransactionId に対応する取引を取得し、Journal として返します。
     async fn get_transactions(&self, transaction_ids: &[TransactionId]) -> Result<Journal>;
     /// 取引とエントリーを追加・削除・更新します。
-    async fn update_transactions(&self, journal: &Journal) -> Result<()>;
+    async fn update_transactions(&self, revision: &dyn RevisionId, journal: &Journal)
+    -> Result<()>;
 }
 
 #[cfg(test)]

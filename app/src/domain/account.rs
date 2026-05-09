@@ -1,6 +1,8 @@
 use crate::domain::book::Book;
 use crate::domain::category::Category;
-use crate::domain::{AccountId, BookId, CategoryId, DomainError, Entity, Relation, Result, UnitId};
+use crate::domain::{
+    AccountId, BookId, CategoryId, DomainError, Entity, Relation, Result, RevisionId, UnitId,
+};
 use async_trait::async_trait;
 use uuid::Uuid;
 
@@ -84,7 +86,7 @@ pub trait AccountRepository: Send + Sync {
     /// 指定された Id の Account を返します。
     async fn get_account(&self, id: AccountId) -> Result<Account>;
     /// Account 情報を保存（作成または更新）します。
-    async fn save_account(&self, account: &Account) -> Result<()>;
+    async fn save_account(&self, revision: &dyn RevisionId, account: &Account) -> Result<()>;
 }
 
 #[cfg(test)]
