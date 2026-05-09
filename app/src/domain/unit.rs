@@ -214,7 +214,7 @@ mod tests {
     #[test]
     fn test_create_unit_validation() {
         let cab_id = crate::domain::CabinetId::new(Uuid::now_v7());
-        let book_id = BookId::new(Uuid::now_v7());
+        let book_id = BookId::new(Uuid::new_v4());
         let book = Book::reconstruct(
             book_id,
             BookSlug::new("slug".to_string()).unwrap(),
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn test_unit_reconstruct() {
         let id = UnitId::new(Uuid::now_v7());
-        let book_id = BookId::new(Uuid::now_v7());
+        let book_id = BookId::new(Uuid::new_v4());
         // 正常系：インフラ層からの復元（reconstruct）が正しく行われることを確認
         let unit = Unit::reconstruct(
             id,

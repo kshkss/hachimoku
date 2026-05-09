@@ -85,7 +85,7 @@ impl Cabinet {
         }
 
         Ok(Book {
-            id: BookId::new(Uuid::now_v7()),
+            id: BookId::new(Uuid::new_v4()),
             slug,
             base_unit,
             name,
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn test_book_reconstruct() {
-        let id = BookId::new(Uuid::now_v7());
+        let id = BookId::new(Uuid::new_v4());
         let slug = BookSlug::new("slug".to_string()).unwrap();
         let unit = UnitId::new(Uuid::now_v7());
         let cab_id = CabinetId::new(Uuid::now_v7());
