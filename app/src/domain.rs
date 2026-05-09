@@ -8,7 +8,7 @@ pub mod unit;
 pub use account::{Account, AccountRepository};
 pub use book::{Book, BookRepository, BookSlug};
 pub use cabinet::{Cabinet, CabinetName, CabinetRepository, CabinetType};
-pub use category::{CATEGORY_UNCLASSIFIED, Category, CategoryUpdater, MajorCategory};
+pub use category::{Category, CategoryUpdater, MajorCategory};
 pub use transaction::{Entry, Journal, Transaction, TransactionParam, TransactionRepository};
 pub use unit::{
     Amount, MAX_PRECISION, MAX_RAW_INT, MAX_RAW_UINT, RawInt, RawUint, Unit, UnitRepository,

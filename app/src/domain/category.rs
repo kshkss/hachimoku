@@ -55,24 +55,24 @@ macro_rules! define_categories {
 }
 
 define_categories! {
-    CATEGORY_CASH => "as_cash",
-    CATEGORY_BANK => "as_bank",
-    CATEGORY_EL_MONEY => "as_electronic_money",
-    CATEGORY_POINT => "as_point",
-    CATEGORY_AD_PAYMENT => "as_advance_payment",
-    CATEGORY_CURRENCY => "as_currency",
-    CATEGORY_GROWTH_PORTFOLIO => "as_growth_portfolio",
-    CATEGORY_INCOME_PORTFOLIO => "as_income_portfolio",
-    CATEGORY_INFLATION_HEDGE_PORTFOLIO => "as_inflation_hedge_portfolio",
-    CATEGORY_CARD => "li_card",
-    CATEGORY_LOAN => "li_loan",
-    CATEGORY_INSTALLMENT => "li_installment",
-    CATEGORY_SHOP => "li_shop",
-    CATEGORY_CARRYOVER => "eq_carryover_balance",
+    CASH => "as_cash",
+    BANK => "as_bank",
+    ELECTRONIC_MONEY => "as_electronic_money",
+    POINT => "as_point",
+    ADVANCE_PAYMENT => "as_advance_payment",
+    CURRENCY => "as_currency",
+    GROWTH_PORTFOLIO => "as_growth_portfolio",
+    INCOME_PORTFOLIO => "as_income_portfolio",
+    INFLATION_HEDGE_PORTFOLIO => "as_inflation_hedge_portfolio",
+    CARD => "li_card",
+    LOAN => "li_loan",
+    INSTALLMENT => "li_installment",
+    SHOP => "li_shop",
+    CARRYOVER => "eq_carryover_balance",
     /// 未分類のカテゴリー ID 定数です。
-    CATEGORY_UNCLASSIFIED => "eq_unclassified",
-    CATEGORY_FOREIGN_EXCHANGE => "eq_foreign_exchange",
-    CATEGORY_VALUATION_GAIN_LOSS => "eq_valuation_gain_loss",
+    UNCLASSIFIED => "eq_unclassified",
+    FOREIGN_EXCHANGE => "eq_foreign_exchange",
+    VALUATION_GAIN_LOSS => "eq_valuation_gain_loss",
 }
 
 /// Category は勘定科目のカテゴリーを表すドメインエンティティです。
