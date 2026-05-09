@@ -6,7 +6,7 @@ use crate::domain::{
     Relation, Result, RevisionId, TransactionId, UnitId,
 };
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::NaiveDate;
 use std::collections::HashMap;
 use uuid::{NoContext, Timestamp, Uuid};
 
@@ -20,7 +20,7 @@ pub struct Journal {
 /// TransactionParam は取引を分割する際などに使用されるパラメータです。
 #[derive(Debug)]
 pub struct TransactionParam {
-    pub date: DateTime<Utc>,
+    pub date: NaiveDate,
     pub note: String,
     pub entries: Vec<EntryId>,
 }
@@ -29,7 +29,7 @@ pub struct TransactionParam {
 #[derive(Debug)]
 pub struct Transaction {
     pub(super) id: TransactionId,
-    pub(super) date: DateTime<Utc>,
+    pub(super) date: NaiveDate,
     pub(super) note: String,
     pub(super) entries: Vec<Entry>,
     pub(super) book: BookId,
@@ -41,7 +41,7 @@ pub struct Transaction {
 pub struct Entry {
     pub(super) id: EntryId,
     /// Date は Entry が保護されるときにセットされます。保護されていない場合は None です。
-    pub(super) date: Option<DateTime<Utc>>,
+    pub(super) date: Option<NaiveDate>,
     pub(super) note: String,
     pub(super) amount: Amount,
     /// Unit は記帳に使用される単位です。
@@ -52,12 +52,9 @@ pub struct Entry {
     pub(super) provider_id: Option<String>,
 }
 
-fn generate_id_from_date(date: DateTime<Utc>) -> Uuid {
-    let ts = Timestamp::from_unix(
-        NoContext,
-        date.timestamp() as u64,
-        date.timestamp_subsec_nanos(),
-    );
+fn generate_id_from_date(date: NaiveDate) -> Uuid {
+    let datetime = date.and_hms_opt(11, 0, 0).expect("invalid time");
+    let ts = Timestamp::from_unix(NoContext, datetime.and_utc().timestamp() as u64, 0);
     Uuid::new_v7(ts)
 }
 
@@ -84,7 +81,7 @@ impl Entry {
     /// Journal 内の Entry に対して直接呼び出してはいけません。
     pub fn mark_protected(
         self,
-        date: DateTime<Utc>,
+        date: NaiveDate,
         note: String,
         provider_id: String,
     ) -> Result<Self> {
@@ -107,7 +104,7 @@ impl Entry {
     /// インフラ層などで既存のデータから Entry を復元します。
     pub fn reconstruct(
         id: EntryId,
-        date: Option<DateTime<Utc>>,
+        date: Option<NaiveDate>,
         note: String,
         amount: Amount,
         unit: Unit,
@@ -128,7 +125,7 @@ impl Entry {
     }
 
     /// 指定された日付が、エントリーの日付（セットされている場合）と一致するかどうかを返します。
-    pub fn is_date_match(&self, date: DateTime<Utc>) -> bool {
+    pub fn is_date_match(&self, date: NaiveDate) -> bool {
         match self.date {
             Some(d) => d == date,
             None => true,
@@ -159,7 +156,7 @@ impl Transaction {
     /// インフラ層などで既存のデータから Transaction を復元します。
     pub fn reconstruct(
         id: TransactionId,
-        date: DateTime<Utc>,
+        date: NaiveDate,
         note: String,
         entries: Vec<Entry>,
         book: BookId,
@@ -312,7 +309,7 @@ impl Journal {
     /// - 貸借が一致しない、または日付に整合性がない場合（`Transaction::validate` に準ずる）。
     pub fn create_transaction(
         &mut self,
-        date: DateTime<Utc>,
+        date: NaiveDate,
         note: String,
         entries: Vec<Entry>,
     ) -> Result<TransactionId> {
@@ -350,7 +347,7 @@ impl Journal {
     pub fn update(
         &mut self,
         txid: TransactionId,
-        date: DateTime<Utc>,
+        date: NaiveDate,
         note: String,
     ) -> Result<TransactionId> {
         let idx = self
@@ -400,7 +397,7 @@ impl Journal {
     /// - 統合後のエントリーの貸借が一致しない場合。
     pub fn merge(
         &mut self,
-        date: DateTime<Utc>,
+        date: NaiveDate,
         note: String,
         transaction_ids: Vec<TransactionId>,
     ) -> Result<TransactionId> {
@@ -602,7 +599,7 @@ impl Account {
     /// 以下の場合は `DomainError::InvalidEntry` を返します。
     /// - 金額が 0 の場合。
     /// - 金額の単位が科目の基本単位と異なり、かつ科目の大分類が「純資産」以外の場合。
-    pub fn create_entry(&self, date: DateTime<Utc>, note: String, amount: Amount) -> Result<Entry> {
+    pub fn create_entry(&self, date: NaiveDate, note: String, amount: Amount) -> Result<Entry> {
         let (major, account_id) = {
             let cat = match self.category() {
                 Relation::Loaded(c) => c,
@@ -657,6 +654,7 @@ pub trait TransactionRepository: Send + Sync {
 mod tests {
     use super::*;
     use crate::domain::{BookSlug, Cabinet, CabinetId, CabinetName, Category, CategoryId, UnitId};
+    use chrono::Utc;
     use uuid::Uuid;
 
     fn setup_book() -> (Book, UnitId) {
@@ -696,7 +694,7 @@ mod tests {
     fn test_entry_protection() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
         let entry = acc
             .create_entry(
                 date,
@@ -727,7 +725,7 @@ mod tests {
     fn test_transaction_balancing() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
 
         let e1 = acc
             .create_entry(
@@ -775,7 +773,7 @@ mod tests {
     fn test_journal_update_ownership_move() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
         let mut journal = book.create_journal();
 
         let e1 = acc
@@ -829,7 +827,7 @@ mod tests {
     fn test_journal_merge() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
         let mut journal = book.create_journal();
 
         let tx1_id = journal
@@ -909,7 +907,7 @@ mod tests {
     fn test_journal_divide() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
         let mut journal = book.create_journal();
 
         let e1 = acc
@@ -998,7 +996,7 @@ mod tests {
     fn test_journal_update_entries() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
         let mut journal = book.create_journal();
 
         let e1 = acc
@@ -1056,7 +1054,7 @@ mod tests {
     fn test_journal_validate_protected_in_deleted() {
         let (book, unit) = setup_book();
         let acc = setup_account(&book, unit);
-        let date = Utc::now();
+        let date = Utc::now().date_naive();
 
         let e1 = acc
             .create_entry(
