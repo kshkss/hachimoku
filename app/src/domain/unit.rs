@@ -201,7 +201,7 @@ impl Book {
 #[async_trait]
 pub trait UnitRepository: Send + Sync {
     /// 指定された Id の Unit を返します。
-    async fn get_unit(&self, book: UnitId) -> Result<Vec<Unit>>;
+    async fn get_unit(&self, unit: UnitId) -> Result<Unit>;
     /// Unit 情報を作成または更新します。
     async fn save_unit(&self, unit: &Unit) -> Result<()>;
 }
