@@ -183,3 +183,8 @@ pub trait Entity {
         self.id() == id
     }
 }
+
+/// RevisionId は、エンティティのリビジョンを表すトレイトです。
+pub trait RevisionId {
+    fn as_u32(&self) -> u32;
+}
