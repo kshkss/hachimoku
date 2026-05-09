@@ -1,6 +1,7 @@
 use crate::domain::{CategoryId, DomainError, Entity, Result};
 use async_trait::async_trait;
 use std::str::FromStr;
+use std::sync::LazyLock;
 
 /// MajorCategory は勘定科目の大分類を表します。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,8 +45,35 @@ impl FromStr for MajorCategory {
     }
 }
 
-/// 未分類のカテゴリー ID 定数です。
-pub const CATEGORY_UNCLASSIFIED: &str = "eq_unclassified";
+macro_rules! define_categories {
+    ($($(#[$attr:meta])* $name:ident => $val:expr),* $(,)?) => {
+        $(
+            $(#[$attr])*
+            pub static $name: LazyLock<CategoryId> = LazyLock::new(|| CategoryId::new($val.to_string()));
+        )*
+    };
+}
+
+define_categories! {
+    CATEGORY_CASH => "as_cash",
+    CATEGORY_BANK => "as_bank",
+    CATEGORY_EL_MONEY => "as_electronic_money",
+    CATEGORY_POINT => "as_point",
+    CATEGORY_AD_PAYMENT => "as_advance_payment",
+    CATEGORY_CURRENCY => "as_currency",
+    CATEGORY_GROWTH_PORTFOLIO => "as_growth_portfolio",
+    CATEGORY_INCOME_PORTFOLIO => "as_income_portfolio",
+    CATEGORY_INFLATION_HEDGE_PORTFOLIO => "as_inflation_hedge_portfolio",
+    CATEGORY_CARD => "li_card",
+    CATEGORY_LOAN => "li_loan",
+    CATEGORY_INSTALLMENT => "li_installment",
+    CATEGORY_SHOP => "li_shop",
+    CATEGORY_CARRYOVER => "eq_carryover_balance",
+    /// 未分類のカテゴリー ID 定数です。
+    CATEGORY_UNCLASSIFIED => "eq_unclassified",
+    CATEGORY_FOREIGN_EXCHANGE => "eq_foreign_exchange",
+    CATEGORY_VALUATION_GAIN_LOSS => "eq_valuation_gain_loss",
+}
 
 /// Category は勘定科目のカテゴリーを表すドメインエンティティです。
 #[derive(Debug)]
