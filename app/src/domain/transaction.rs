@@ -2,8 +2,8 @@ use crate::domain::account::Account;
 use crate::domain::book::Book;
 use crate::domain::unit::Unit;
 use crate::domain::{
-    AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, RawInt, RawUint,
-    Relation, Result, RevisionId, TransactionId, UnitId,
+    AccountId, Amount, BookId, DomainError, Entity, EntryId, MajorCategory, Relation, Result,
+    RevisionId, TransactionId, UnitId,
 };
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -699,7 +699,7 @@ mod tests {
             .create_entry(
                 date,
                 "Note".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
+                Amount::new_debit(100, unit).unwrap(),
             )
             .unwrap();
 
@@ -728,17 +728,13 @@ mod tests {
         let date = Utc::now().date_naive();
 
         let e1 = acc
-            .create_entry(
-                date,
-                "D".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
-            )
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
 
@@ -756,11 +752,7 @@ mod tests {
 
         // 異常系：貸借が一致しなくなった取引がバリデーションエラー（InvalidTransactionOperation）になることを確認
         let e3 = acc
-            .create_entry(
-                date,
-                "D".to_string(),
-                Amount::new_debit(RawUint(10), unit).unwrap(),
-            )
+            .create_entry(date, "D".to_string(), Amount::new_debit(10, unit).unwrap())
             .unwrap();
         tx.push_entry(e3);
         assert!(matches!(
@@ -777,17 +769,13 @@ mod tests {
         let mut journal = book.create_journal();
 
         let e1 = acc
-            .create_entry(
-                date,
-                "D".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
-            )
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
 
@@ -835,16 +823,12 @@ mod tests {
                 date,
                 "T1".to_string(),
                 vec![
-                    acc.create_entry(
-                        date,
-                        "D".to_string(),
-                        Amount::new_debit(RawUint(100), unit).unwrap(),
-                    )
-                    .unwrap(),
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
+                        .unwrap(),
                     acc.create_entry(
                         date,
                         "C".to_string(),
-                        Amount::new_credit(RawUint(100), unit).unwrap(),
+                        Amount::new_credit(100, unit).unwrap(),
                     )
                     .unwrap(),
                 ],
@@ -856,18 +840,10 @@ mod tests {
                 date,
                 "T2".to_string(),
                 vec![
-                    acc.create_entry(
-                        date,
-                        "D".to_string(),
-                        Amount::new_debit(RawUint(50), unit).unwrap(),
-                    )
-                    .unwrap(),
-                    acc.create_entry(
-                        date,
-                        "C".to_string(),
-                        Amount::new_credit(RawUint(50), unit).unwrap(),
-                    )
-                    .unwrap(),
+                    acc.create_entry(date, "D".to_string(), Amount::new_debit(50, unit).unwrap())
+                        .unwrap(),
+                    acc.create_entry(date, "C".to_string(), Amount::new_credit(50, unit).unwrap())
+                        .unwrap(),
                 ],
             )
             .unwrap();
@@ -914,7 +890,7 @@ mod tests {
             .create_entry(
                 date,
                 "D1".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
+                Amount::new_debit(100, unit).unwrap(),
             )
             .unwrap();
         let e1_id = e1.id();
@@ -922,23 +898,19 @@ mod tests {
             .create_entry(
                 date,
                 "C1".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
         let e2_id = e2.id();
         let e3 = acc
-            .create_entry(
-                date,
-                "D2".to_string(),
-                Amount::new_debit(RawUint(50), unit).unwrap(),
-            )
+            .create_entry(date, "D2".to_string(), Amount::new_debit(50, unit).unwrap())
             .unwrap();
         let e3_id = e3.id();
         let e4 = acc
             .create_entry(
                 date,
                 "C2".to_string(),
-                Amount::new_credit(RawUint(50), unit).unwrap(),
+                Amount::new_credit(50, unit).unwrap(),
             )
             .unwrap();
         let e4_id = e4.id();
@@ -1003,7 +975,7 @@ mod tests {
             .create_entry(
                 date,
                 "Reuse".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
+                Amount::new_debit(100, unit).unwrap(),
             )
             .unwrap();
         let e1_id = e1.id();
@@ -1011,7 +983,7 @@ mod tests {
             .create_entry(
                 date,
                 "Delete".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
 
@@ -1024,7 +996,7 @@ mod tests {
             .create_entry(
                 date,
                 "New".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
 
@@ -1057,17 +1029,13 @@ mod tests {
         let date = Utc::now().date_naive();
 
         let e1 = acc
-            .create_entry(
-                date,
-                "D".to_string(),
-                Amount::new_debit(RawUint(100), unit).unwrap(),
-            )
+            .create_entry(date, "D".to_string(), Amount::new_debit(100, unit).unwrap())
             .unwrap();
         let e2 = acc
             .create_entry(
                 date,
                 "C".to_string(),
-                Amount::new_credit(RawUint(100), unit).unwrap(),
+                Amount::new_credit(100, unit).unwrap(),
             )
             .unwrap();
         let e1_protected = e1
