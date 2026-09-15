@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 async-trait = "0.1.89"
 chrono = "0.4.44"
+hypertext = { version = "0.12.1", features = ["htmx", "alpine"] }
 regex = "1.12.3"
 thiserror = "2.0.18"
 uuid = { version = "1.23.1", features = ["v4", "v7"] }
