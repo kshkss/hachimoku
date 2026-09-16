@@ -67,15 +67,13 @@ pub async fn pnl(service: impl AccountService + BookService, args: PNLArgs) -> R
         }
     }
 
-    let filter = Filter {
-        from: NaiveDate::from_ymd_opt(args.year, args.month, 1).unwrap(),
-        to: NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
+    let filter = Filter::new(
+        NaiveDate::from_ymd_opt(args.year, args.month, 1).unwrap(),
+        NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
             .unwrap()
             .pred_opt()
             .unwrap(),
-        source: None,
-        destination: None,
-    };
+    );
 
     let expense = service.find_accounts(&expense, &filter).await?;
     let mut sum_expense = 0;

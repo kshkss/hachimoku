@@ -69,27 +69,20 @@ pub async fn history(
 
     let filter = if let Some(day) = args.day {
         let date = NaiveDate::from_ymd_opt(args.year as i32, args.month, day).unwrap();
-        Filter {
-            from: date,
-            to: date,
-            source: None,
-            destination: None,
-        }
+        Filter::new(date, date)
     } else {
-        Filter {
-            from: NaiveDate::from_ymd_opt(args.year, args.month, 1).unwrap(),
-            to: NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
+        Filter::new(
+            NaiveDate::from_ymd_opt(args.year, args.month, 1).unwrap(),
+            NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
                 .unwrap()
                 .pred_opt()
                 .unwrap(),
-            source: None,
-            destination: None,
-        }
+        )
     };
 
     let transactions = service.find_transactions(&account_ids, &filter).await?;
     let mut sum_dates = Vec::with_capacity(31);
-    for _ in filter.from.iter_days().take_while(|&d| d <= filter.to) {
+    for _ in filter.iter_days() {
         sum_dates.push(0)
     }
     for t in transactions.iter() {

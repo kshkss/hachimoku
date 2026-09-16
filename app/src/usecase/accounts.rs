@@ -65,15 +65,13 @@ pub async fn accounts(
         }
     }
 
-    let filter = Filter {
-        from: EPOCH_DATE,
-        to: NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
+    let filter = Filter::new(
+        EPOCH_DATE,
+        NaiveDate::from_ymd_opt(args.year, args.month + 1, 1)
             .unwrap()
             .pred_opt()
             .unwrap(),
-        source: None,
-        destination: None,
-    };
+    );
 
     let assets = service.find_accounts(&assets, &filter).await?;
     let mut sum_asset = 0;
