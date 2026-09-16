@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 async-trait = "0.1.89"
+axum = "0.8.9"
 chrono = "0.4.44"
 hypertext = { version = "0.12.1", features = ["htmx", "alpine"] }
 regex = "1.12.3"
+serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.18"
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros", "net"] }
 uuid = { version = "1.23.1", features = ["v4", "v7"] }
