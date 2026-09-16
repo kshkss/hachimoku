@@ -14,10 +14,6 @@ pub use unit::{
     Amount, MAX_PRECISION, MAX_RAW_INT, MAX_RAW_UINT, RawInt, RawUint, Unit, UnitRepository,
 };
 
-use regex::Regex;
-use std::fmt;
-use std::str::FromStr;
-use std::sync::LazyLock;
 use thiserror::Error;
 use uuid::Uuid;
 
