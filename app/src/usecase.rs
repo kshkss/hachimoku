@@ -8,9 +8,9 @@ pub mod pnl;
 pub mod query;
 pub mod shop;
 
-use query::{
-    AccountEntry, AccountReport, AccountService, BookEntry, BookService, Filter, TransactionReport,
-    TransactionService,
+pub use query::{
+    AccountEntry, AccountReport, AccountService, BookEntry, BookRole, BookService, Filter,
+    TransactionReport, TransactionService,
 };
 
 pub static EPOCH_DATE: NaiveDate = NaiveDate::from_ymd_opt(1970, 1, 1).unwrap();
